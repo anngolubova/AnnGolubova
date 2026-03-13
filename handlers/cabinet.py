@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from aiogram import F, Router
 from aiogram.enums import ChatType
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -29,6 +30,16 @@ class AddBotState(StatesGroup):
 def get_cabinet_router(cabinet_service: CabinetService) -> Router:
     router = Router(name="constructor_cabinet_router")
 
+    async def _safe_edit_text(callback: CallbackQuery, *, text: str, reply_markup=None) -> None:
+        if callback.message is None:
+            return
+        try:
+            await callback.message.edit_text(text, reply_markup=reply_markup)
+        except TelegramBadRequest as error:
+            # Avoid noisy crashes when text/markup has not changed.
+            if "message is not modified" not in str(error).lower():
+                raise
+
     @router.message(F.chat.type == ChatType.PRIVATE, Command("start"))
     async def cabinet_start(message: Message) -> None:
         if message.from_user is None:
@@ -42,6 +53,8 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
 
     @router.message(F.chat.type == ChatType.PRIVATE, Command("cabinet"))
     async def cabinet_open(message: Message) -> None:
+        if message.from_user is not None:
+            await cabinet_service.register_admin(message.from_user)
         await message.answer("Личный кабинет открыт.", reply_markup=get_cabinet_keyboard())
 
     @router.message(F.chat.type == ChatType.PRIVATE, Command("cancel"))
@@ -52,6 +65,8 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
 
     @router.message(F.chat.type == ChatType.PRIVATE, F.text == BTN_ADD_BOT)
     async def add_bot_clicked(message: Message, state: FSMContext) -> None:
+        if message.from_user is not None:
+            await cabinet_service.register_admin(message.from_user)
         await state.set_state(AddBotState.waiting_token)
         await message.answer(
             "Отправьте токен нового бота из @BotFather.",
@@ -115,6 +130,7 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
     async def show_my_bots(message: Message) -> None:
         if message.from_user is None:
             return
+        await cabinet_service.register_admin(message.from_user)
         cards = await cabinet_service.list_admin_bots_with_stats(message.from_user.id)
         if not cards:
             await message.answer("У вас пока нет подключённых ботов. Нажмите 'Добавить бота'.")
@@ -130,11 +146,11 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
             return
         cards = await cabinet_service.list_admin_bots_with_stats(callback.from_user.id)
         text = "Ваши боты:" if cards else "Список ботов пуст."
-        if callback.message is not None:
-            await callback.message.edit_text(
-                text,
-                reply_markup=get_bots_inline_keyboard(cards) if cards else None,
-            )
+        await _safe_edit_text(
+            callback,
+            text=text,
+            reply_markup=get_bots_inline_keyboard(cards) if cards else None,
+        )
         await callback.answer()
 
     @router.callback_query(F.data.startswith("cabinet:view:"))
@@ -158,12 +174,15 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
 
         status = "активен" if card.runtime.is_active else "остановлен"
         title = card.runtime.title or card.runtime.username or f"bot_{card.runtime.db_bot_id}"
-        await callback.message.edit_text(
-            f"Бот: {title}\n"
-            f"Статус: {status}\n"
-            f"Пользователей: {card.users_total}\n"
-            f"Диалогов: {card.dialogs_total}\n"
-            f"Сообщений: {card.messages_total}",
+        await _safe_edit_text(
+            callback,
+            text=(
+                f"Бот: {title}\n"
+                f"Статус: {status}\n"
+                f"Пользователей: {card.users_total}\n"
+                f"Диалогов: {card.dialogs_total}\n"
+                f"Сообщений: {card.messages_total}"
+            ),
             reply_markup=get_bot_details_keyboard(card.runtime.db_bot_id),
         )
         await callback.answer()
@@ -189,17 +208,18 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
         state_text = "включен" if is_active else "выключен"
         await callback.answer(f"Бот {state_text}.")
 
-        if callback.message is not None:
-            cards = await cabinet_service.list_admin_bots_with_stats(callback.from_user.id)
-            await callback.message.edit_text(
-                "Ваши боты:",
-                reply_markup=get_bots_inline_keyboard(cards) if cards else None,
-            )
+        cards = await cabinet_service.list_admin_bots_with_stats(callback.from_user.id)
+        await _safe_edit_text(
+            callback,
+            text="Ваши боты:",
+            reply_markup=get_bots_inline_keyboard(cards) if cards else None,
+        )
 
     @router.message(F.chat.type == ChatType.PRIVATE, F.text == BTN_MY_STATS)
     async def show_dashboard(message: Message) -> None:
         if message.from_user is None:
             return
+        await cabinet_service.register_admin(message.from_user)
         snapshot = await cabinet_service.get_dashboard(message.from_user.id)
         await message.answer(
             "Ваш кабинет:\n"
@@ -214,6 +234,7 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
     async def export_database(message: Message) -> None:
         if message.from_user is None:
             return
+        await cabinet_service.register_admin(message.from_user)
         filename, payload = await cabinet_service.export_users_csv(message.from_user.id)
         if not payload:
             await message.answer("Нет данных для выгрузки.")

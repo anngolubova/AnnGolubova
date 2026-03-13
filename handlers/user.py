@@ -21,7 +21,11 @@ def get_user_router(services: ServiceContainer) -> Router:
     dialog_service = DialogService(services.session_factory, services.runtime.db_bot_id)
     routing_service = RoutingService()
 
-    @router.message(F.chat.type == ChatType.PRIVATE, CommandStart())
+    def is_end_user_message(message: Message) -> bool:
+        # Prevent feedback loop when admin chat is a private chat.
+        return message.chat.id != services.runtime.admin_chat_id
+
+    @router.message(F.chat.type == ChatType.PRIVATE, is_end_user_message, CommandStart())
     async def start_handler(message: Message) -> None:
         if message.from_user is None:
             return
@@ -30,6 +34,7 @@ def get_user_router(services: ServiceContainer) -> Router:
 
     @router.message(
         F.chat.type == ChatType.PRIVATE,
+        is_end_user_message,
         F.content_type.in_(SUPPORTED_CONTENT_TYPES),
     )
     async def user_message_handler(message: Message) -> None:
@@ -63,7 +68,7 @@ def get_user_router(services: ServiceContainer) -> Router:
         if dialog_context.is_new_dialog:
             await message.answer("Ваше обращение отправлено. Ожидайте ответ администратора.")
 
-    @router.message(F.chat.type == ChatType.PRIVATE)
+    @router.message(F.chat.type == ChatType.PRIVATE, is_end_user_message)
     async def unsupported_handler(message: Message) -> None:
         await message.answer(UNSUPPORTED_CONTENT_TEXT)
 

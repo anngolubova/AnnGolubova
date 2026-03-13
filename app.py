@@ -16,7 +16,7 @@ from services.bot_registry_service import BotRegistryService
 from services.polling_manager import ManagedBotsPollingManager
 from utils.config import Settings
 from utils.logging import setup_logging
-from utils.process_lock import SingleInstanceLock
+from utils.process_lock import ProcessAlreadyRunningError, SingleInstanceLock
 
 logger = logging.getLogger(__name__)
 
@@ -155,7 +155,7 @@ async def main() -> None:
 if __name__ == "__main__":
     try:
         asyncio.run(main())
-    except RuntimeError as error:
+    except ProcessAlreadyRunningError as error:
         logger.error(str(error))
     except (KeyboardInterrupt, SystemExit):
         logger.info("Bot stopped by user.")

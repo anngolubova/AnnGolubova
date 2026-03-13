@@ -4,6 +4,10 @@ import fcntl
 from pathlib import Path
 
 
+class ProcessAlreadyRunningError(RuntimeError):
+    """Raised when another process already holds the app lock."""
+
+
 class SingleInstanceLock:
     def __init__(self, lock_path: str) -> None:
         self._lock_file_path = Path(lock_path)
@@ -17,7 +21,7 @@ class SingleInstanceLock:
         except BlockingIOError as error:
             self._file_handle.close()
             self._file_handle = None
-            raise RuntimeError(
+            raise ProcessAlreadyRunningError(
                 "Another app.py process is already running. Stop duplicate processes first."
             ) from error
 

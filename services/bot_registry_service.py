@@ -4,7 +4,7 @@ import logging
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramBadRequest, TelegramUnauthorizedError
-from sqlalchemy import and_, not_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from bot.runtime import BotRuntime
@@ -26,12 +26,11 @@ class BotRegistryService:
     ) -> None:
         async with self._session_factory() as session:
             async with session.begin():
-                if not tokens:
-                    return
-
-                existing_stmt = select(BotModel).where(BotModel.token.in_(tokens))
-                existing_rows = (await session.execute(existing_stmt)).scalars().all()
-                existing_by_token = {row.token: row for row in existing_rows}
+                existing_by_token: dict[str, BotModel] = {}
+                if tokens:
+                    existing_stmt = select(BotModel).where(BotModel.token.in_(tokens))
+                    existing_rows = (await session.execute(existing_stmt)).scalars().all()
+                    existing_by_token = {row.token: row for row in existing_rows}
 
                 for index, token in enumerate(tokens):
                     admin_chat_id = (
@@ -65,14 +64,13 @@ class BotRegistryService:
                             bot_record.title = bot_record.title or username
                             bot_record.admin_chat_id = admin_chat_id
 
-                deactivate_stmt = select(BotModel).where(
-                    and_(
-                        BotModel.owner_admin_id.is_(None),
-                        not_(BotModel.token.in_(tokens)),
-                    )
-                )
-                for row in (await session.execute(deactivate_stmt)).scalars().all():
-                    row.is_active = False
+                # If BOT_TOKENS is empty, all legacy bots must be deactivated.
+                legacy_stmt = select(BotModel).where(BotModel.owner_admin_id.is_(None))
+                legacy_rows = (await session.execute(legacy_stmt)).scalars().all()
+                active_tokens = set(tokens)
+                for row in legacy_rows:
+                    if row.token not in active_tokens:
+                        row.is_active = False
 
     async def get_active_bots(self) -> list[BotRuntime]:
         async with self._session_factory() as session:
