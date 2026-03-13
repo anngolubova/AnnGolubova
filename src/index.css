@@ -1,126 +1,182 @@
-@import "tailwindcss";
-
 :root {
-  color-scheme: dark;
-  font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
-  background: #1f1d1b;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  color: #f9f3eb;
+  background: #2f2119;
+  line-height: 1.5;
+  font-weight: 400;
 }
 
-html {
-  scroll-behavior: smooth;
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
 }
 
 body {
+  background:
+    radial-gradient(circle at top right, rgba(246, 170, 126, 0.2), transparent 32%),
+    radial-gradient(circle at 10% 20%, rgba(111, 62, 44, 0.35), transparent 35%),
+    #2f2119;
+}
+
+.page {
+  color: #f9f3eb;
+}
+
+.container {
+  width: min(1120px, 92vw);
+  margin: 0 auto;
+}
+
+.hero {
+  padding: 72px 0 56px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background:
+    linear-gradient(0deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04)),
+    linear-gradient(135deg, #7f4a34, #4e2f22 58%, #3b271f);
+}
+
+.hero-badge {
+  display: inline-block;
+  margin-bottom: 18px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(0, 0, 0, 0.2);
+  font-size: 0.82rem;
+}
+
+h1 {
+  margin: 0 0 12px;
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  line-height: 1.1;
+}
+
+h2 {
+  margin: 0 0 10px;
+  font-size: clamp(1.4rem, 3.6vw, 2rem);
+}
+
+h3 {
+  margin: 0 0 8px;
+  font-size: 1.12rem;
+}
+
+p {
   margin: 0;
-  min-width: 320px;
-  background:
-    radial-gradient(circle at top, rgba(226, 114, 91, 0.12), transparent 30%),
-    linear-gradient(180deg, #201d1b 0%, #1a1816 100%);
-  color: #f8f3ec;
 }
 
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background-image:
-    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.03) 0, transparent 36%),
-    radial-gradient(circle at 80% 10%, rgba(255, 255, 255, 0.03) 0, transparent 34%),
-    radial-gradient(circle at 50% 80%, rgba(255, 255, 255, 0.02) 0, transparent 36%);
-  mix-blend-mode: screen;
-  opacity: 0.7;
-  z-index: 0;
+.hero-text {
+  max-width: 720px;
+  margin-bottom: 24px;
+  color: rgba(249, 243, 235, 0.92);
 }
 
-#root {
-  position: relative;
-  z-index: 1;
+.hero-button {
+  display: inline-block;
+  padding: 11px 18px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: linear-gradient(180deg, #d97745, #b75e34);
+  color: #fff8f1;
+  text-decoration: none;
+  font-weight: 600;
+  transition: transform 0.16s ease, opacity 0.16s ease;
 }
 
-::selection {
-  background: rgba(226, 114, 91, 0.35);
-  color: white;
-}
-
-.brick-texture {
-  background:
-    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(233, 221, 200, 0.08), rgba(45, 45, 45, 0.05));
-  background-size:
-    120px 70px,
-    120px 70px,
-    100% 100%;
-  background-position:
-    0 0,
-    0 0,
-    0 0;
-  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.95), transparent 92%);
-}
-
-.brick-grid {
-  background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(145deg, rgba(226, 114, 91, 0.06), rgba(255, 255, 255, 0.03));
-  background-size:
-    96px 52px,
-    96px 52px,
-    100% 100%;
-}
-
-.form-input {
-  width: 100%;
-  border-radius: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.05);
-  padding: 1rem 1.1rem;
-  color: #f8f3ec;
-  outline: none;
-  transition:
-    border-color 180ms ease,
-    background-color 180ms ease,
-    transform 180ms ease;
-}
-
-.form-input::placeholder {
-  color: rgba(255, 255, 255, 0.36);
-}
-
-.form-input:focus {
-  border-color: rgba(226, 114, 91, 0.68);
-  background: rgba(255, 255, 255, 0.07);
+.hero-button:hover {
   transform: translateY(-1px);
+  opacity: 0.95;
 }
 
-.mortar-slider {
-  appearance: none;
-  height: 14px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, rgba(226, 114, 91, 0.7), rgba(233, 221, 200, 0.45));
-  outline: none;
+.section {
+  padding: 44px 0 8px;
 }
 
-.mortar-slider::-webkit-slider-thumb {
-  appearance: none;
-  width: 26px;
-  height: 26px;
-  border-radius: 999px;
-  border: 2px solid rgba(255, 255, 255, 0.82);
-  background: #2d2d2d;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
-  cursor: pointer;
+.section-intro {
+  margin-bottom: 18px;
+  max-width: 760px;
+  color: rgba(249, 243, 235, 0.86);
 }
 
-.mortar-slider::-moz-range-thumb {
-  width: 26px;
-  height: 26px;
-  border-radius: 999px;
-  border: 2px solid rgba(255, 255, 255, 0.82);
-  background: #2d2d2d;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
-  cursor: pointer;
+.grid {
+  display: grid;
+  gap: 14px;
+}
+
+.stages-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.types-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.advantages-grid {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.card,
+.type-tile {
+  padding: 18px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.brick-card {
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(145deg, #9b5b3f, #704332);
+  background-size:
+    84px 42px,
+    84px 42px,
+    100% 100%;
+}
+
+.highlight {
+  margin-bottom: 18px;
+  padding: 14px;
+  border-left: 4px solid #f4a261;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.type-tile {
+  font-weight: 600;
+  background:
+    linear-gradient(155deg, rgba(210, 128, 88, 0.38), rgba(101, 61, 45, 0.52)),
+    rgba(255, 255, 255, 0.08);
+}
+
+.footer {
+  margin-top: 40px;
+  padding: 34px 0 50px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.footer-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 18px;
+}
+
+@media (max-width: 720px) {
+  .hero {
+    padding-top: 56px;
+  }
+
+  .footer-inner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
