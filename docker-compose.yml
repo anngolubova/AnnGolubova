@@ -1,0 +1,19 @@
+services:
+  bot:
+    build: .
+    container_name: telegram-feedback-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      redis:
+        condition: service_started
+
+  redis:
+    image: redis:7-alpine
+    container_name: telegram-feedback-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
