@@ -18,10 +18,12 @@ class ManagedBotsPollingManager:
         registry: BotRegistryService,
         runner: Callable[[BotRuntime], Awaitable[None]],
         refresh_interval_seconds: int = 8,
+        exclude_tokens: set[str] | None = None,
     ) -> None:
         self._registry = registry
         self._runner = runner
         self._refresh_interval_seconds = refresh_interval_seconds
+        self._exclude_tokens = exclude_tokens or set()
         self._tasks: dict[int, asyncio.Task[None]] = {}
         self._stopped = asyncio.Event()
 
@@ -44,7 +46,11 @@ class ManagedBotsPollingManager:
     async def _reconcile(self) -> None:
         self._cleanup_finished_tasks()
 
-        runtimes = await self._registry.get_active_bots()
+        runtimes = [
+            runtime
+            for runtime in await self._registry.get_active_bots()
+            if runtime.token not in self._exclude_tokens
+        ]
         active_ids = {runtime.db_bot_id for runtime in runtimes}
 
         for runtime in runtimes:
