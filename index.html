@@ -8,14 +8,1292 @@
       name="description"
       content="Премиальный лендинг ОАО «Голицынский керамический завод»: кирпич, керамические блоки, лаборатория и решения для надежного строительства."
     />
-    <meta
-      name="theme-color"
-      content="#2D2D2D"
-    />
+    <meta name="theme-color" content="#2D2D2D" />
     <link rel="icon" href="/favicon.svg" />
+    <style>
+      :root {
+        --terracotta: #e2725b;
+        --graphite: #2d2d2d;
+        --sand: #e9ddc8;
+        --bg: #1f1d1b;
+        --text: #f8f3ec;
+        --muted: rgba(248, 243, 236, 0.72);
+        --radius-lg: 34px;
+        --radius-md: 28px;
+        --radius-sm: 24px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top, rgba(226, 114, 91, 0.12), transparent 30%),
+          linear-gradient(180deg, #201d1b 0%, #1a1816 100%);
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background-image:
+          radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.03) 0, transparent 36%),
+          radial-gradient(circle at 80% 10%, rgba(255, 255, 255, 0.03) 0, transparent 34%),
+          radial-gradient(circle at 50% 80%, rgba(255, 255, 255, 0.02) 0, transparent 36%);
+        mix-blend-mode: screen;
+        opacity: 0.7;
+        z-index: 0;
+      }
+
+      .page {
+        position: relative;
+        z-index: 1;
+        min-height: 100vh;
+      }
+
+      .container {
+        width: min(1280px, calc(100% - 2rem));
+        margin-inline: auto;
+      }
+
+      .card {
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: var(--radius-lg);
+        box-shadow: 0 24px 100px rgba(0, 0, 0, 0.2);
+      }
+
+      .btn {
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        border-radius: 999px;
+        padding: 0.8rem 1.35rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: 220ms ease;
+        cursor: pointer;
+      }
+
+      .btn.primary {
+        background: var(--terracotta);
+        color: white;
+        box-shadow: 0 18px 34px rgba(226, 114, 91, 0.28);
+      }
+
+      .btn.primary:hover {
+        transform: translateY(-1px);
+        background: #ef826d;
+      }
+
+      .btn.ghost {
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.07);
+        color: white;
+      }
+
+      .btn.ghost:hover {
+        border-color: rgba(255, 255, 255, 0.25);
+        background: rgba(255, 255, 255, 0.11);
+      }
+
+      .sticky-header {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        padding: 1rem 0 0;
+      }
+
+      .nav-shell {
+        border-radius: 30px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(45, 45, 45, 0.68);
+        backdrop-filter: blur(22px);
+        box-shadow: 0 18px 60px rgba(0, 0, 0, 0.26);
+        padding: 0.75rem 1rem;
+      }
+
+      .header-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+        text-decoration: none;
+        color: white;
+      }
+
+      .brand-mark {
+        width: 48px;
+        height: 48px;
+        border-radius: 18px;
+        padding: 0.45rem;
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.25rem;
+      }
+
+      .brand-mark span {
+        border-radius: 10px;
+      }
+
+      .brand-mark span:nth-child(1),
+      .brand-mark span:nth-child(4) {
+        background: var(--terracotta);
+      }
+
+      .brand-mark span:nth-child(2),
+      .brand-mark span:nth-child(3) {
+        background: var(--sand);
+      }
+
+      .brand-eyebrow {
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.28em;
+        color: #d7c2a2;
+      }
+
+      .brand-name {
+        margin-top: 0.2rem;
+        font-weight: 600;
+        line-height: 1.2;
+      }
+
+      .desktop-nav {
+        display: none;
+        align-items: center;
+        gap: 1.7rem;
+      }
+
+      .desktop-nav a {
+        color: rgba(255, 255, 255, 0.75);
+        text-decoration: none;
+        font-size: 0.95rem;
+      }
+
+      .desktop-nav a:hover {
+        color: white;
+      }
+
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+      }
+
+      .menu-btn {
+        width: 46px;
+        height: 46px;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.13);
+        background: rgba(255, 255, 255, 0.08);
+        color: white;
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .mobile-menu {
+        margin-top: 0.75rem;
+        border-radius: var(--radius-md);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(45, 45, 45, 0.88);
+        backdrop-filter: blur(15px);
+        padding: 0.8rem;
+        display: none;
+      }
+
+      .mobile-menu.open {
+        display: block;
+      }
+
+      .mobile-menu a {
+        display: block;
+        padding: 0.8rem 0.95rem;
+        text-decoration: none;
+        border-radius: 22px;
+        color: rgba(255, 255, 255, 0.82);
+      }
+
+      .mobile-menu a:hover {
+        background: rgba(255, 255, 255, 0.08);
+        color: white;
+      }
+
+      .main {
+        padding: 1rem 0 4rem;
+      }
+
+      .hero-grid {
+        display: grid;
+        gap: 1.5rem;
+      }
+
+      .hero-main {
+        position: relative;
+        overflow: hidden;
+        padding: 1.5rem;
+        border-radius: 40px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background:
+          linear-gradient(
+            135deg,
+            rgba(226, 114, 91, 0.18),
+            rgba(33, 31, 30, 0.88) 48%,
+            rgba(233, 221, 200, 0.18)
+          );
+        box-shadow: 0 26px 120px rgba(0, 0, 0, 0.28);
+      }
+
+      .brick-texture {
+        position: absolute;
+        inset: 0;
+        opacity: 0.58;
+        background:
+          linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+          linear-gradient(180deg, rgba(233, 221, 200, 0.08), rgba(45, 45, 45, 0.05));
+        background-size:
+          120px 70px,
+          120px 70px,
+          100% 100%;
+      }
+
+      .hero-glow {
+        position: absolute;
+        right: -3.5rem;
+        top: 3rem;
+        width: 230px;
+        height: 230px;
+        border-radius: 999px;
+        background: rgba(226, 114, 91, 0.24);
+        filter: blur(50px);
+      }
+
+      .hero-content {
+        position: relative;
+        z-index: 2;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        border-radius: 999px;
+        border: 1px solid rgba(232, 195, 158, 0.22);
+        background: rgba(255, 255, 255, 0.08);
+        padding: 0.45rem 0.8rem;
+        font-size: 0.72rem;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        color: #e8c39e;
+      }
+
+      h1 {
+        margin: 1.5rem 0 0;
+        font-size: clamp(2.05rem, 4.8vw, 4.35rem);
+        line-height: 1.03;
+      }
+
+      .lead {
+        color: var(--muted);
+        margin-top: 1rem;
+        line-height: 1.7;
+        max-width: 720px;
+      }
+
+      .hero-cta {
+        margin-top: 1.5rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+      }
+
+      .trust-grid {
+        margin-top: 1.8rem;
+        display: grid;
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+        gap: 0.8rem;
+      }
+
+      .trust-mini {
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 30px;
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.06);
+      }
+
+      .trust-mini h3 {
+        margin: 0.75rem 0 0.35rem;
+        font-size: 1.04rem;
+      }
+
+      .trust-mini p {
+        margin: 0;
+        font-size: 0.92rem;
+        color: rgba(255, 255, 255, 0.7);
+        line-height: 1.55;
+      }
+
+      .hero-side {
+        display: grid;
+        gap: 1rem;
+      }
+
+      .palette-card,
+      .texture-card {
+        padding: 1.35rem;
+      }
+
+      .kicker {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.3em;
+        color: #d7c2a2;
+      }
+
+      .palette-grid {
+        display: grid;
+        gap: 0.8rem;
+        margin-top: 1rem;
+      }
+
+      .swatch {
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        border-radius: var(--radius-md);
+        padding: 0.8rem;
+      }
+
+      .swatch-view {
+        height: 84px;
+        border-radius: var(--radius-sm);
+      }
+
+      .swatch p {
+        margin: 0.7rem 0 0.2rem;
+      }
+
+      .swatch small {
+        color: rgba(255, 255, 255, 0.45);
+        text-transform: uppercase;
+        letter-spacing: 0.2em;
+      }
+
+      .brick-grid {
+        background:
+          linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+          linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+          linear-gradient(145deg, rgba(226, 114, 91, 0.06), rgba(255, 255, 255, 0.03));
+        background-size:
+          96px 52px,
+          96px 52px,
+          100% 100%;
+      }
+
+      .brick-rows {
+        margin-top: 1.2rem;
+      }
+
+      .brick-row {
+        display: flex;
+        gap: 12px;
+        margin-top: 0.7rem;
+      }
+
+      .brick-row:nth-child(even) {
+        transform: translateX(28px);
+      }
+
+      .brick-unit {
+        min-height: 60px;
+        flex: 1;
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      .section {
+        margin-top: 1.5rem;
+      }
+
+      .section-shell {
+        padding: 1.45rem;
+      }
+
+      .section h2 {
+        margin: 0.65rem 0 0;
+        font-size: clamp(1.75rem, 4vw, 3rem);
+      }
+
+      .section-sub {
+        margin-top: 0.7rem;
+        color: var(--muted);
+        line-height: 1.7;
+        max-width: 900px;
+      }
+
+      .catalog-grid {
+        display: grid;
+        gap: 1rem;
+        margin-top: 1.4rem;
+      }
+
+      .product-list {
+        display: grid;
+        gap: 0.8rem;
+      }
+
+      .product-btn {
+        width: 100%;
+        text-align: left;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 30px;
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.04);
+        color: white;
+        cursor: pointer;
+      }
+
+      .product-btn.active {
+        border-color: rgba(226, 114, 91, 0.72);
+        background: rgba(226, 114, 91, 0.12);
+        box-shadow: 0 22px 50px rgba(226, 114, 91, 0.14);
+      }
+
+      .product-btn small {
+        color: #d7c2a2;
+        text-transform: uppercase;
+        letter-spacing: 0.2em;
+      }
+
+      .product-btn p {
+        color: rgba(255, 255, 255, 0.69);
+        line-height: 1.55;
+      }
+
+      .catalog-detail {
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: var(--radius-lg);
+        background: rgba(255, 255, 255, 0.05);
+        padding: 1.2rem;
+      }
+
+      .chip {
+        border-radius: 999px;
+        border: 1px solid rgba(226, 114, 91, 0.3);
+        background: rgba(226, 114, 91, 0.12);
+        color: #ffc9bd;
+        padding: 0.45rem 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.22em;
+        font-size: 0.69rem;
+      }
+
+      .detail-list {
+        margin: 1rem 0 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 0.55rem;
+      }
+
+      .detail-list li {
+        border: 1px solid rgba(255, 255, 255, 0.09);
+        background: rgba(31, 29, 27, 0.95);
+        border-radius: 24px;
+        padding: 0.7rem 0.85rem;
+        color: rgba(255, 255, 255, 0.75);
+      }
+
+      .masonry-block {
+        margin-top: 1rem;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: var(--radius-lg);
+        background: #1d1b19;
+        padding: 1rem;
+      }
+
+      .mode-picker {
+        margin-top: 0.8rem;
+      }
+
+      input[type="range"] {
+        width: 100%;
+        appearance: none;
+        height: 14px;
+        border-radius: 999px;
+        background: linear-gradient(
+          90deg,
+          rgba(226, 114, 91, 0.7),
+          rgba(233, 221, 200, 0.45)
+        );
+      }
+
+      input[type="range"]::-webkit-slider-thumb {
+        appearance: none;
+        width: 26px;
+        height: 26px;
+        border-radius: 999px;
+        border: 2px solid rgba(255, 255, 255, 0.82);
+        background: var(--graphite);
+      }
+
+      input[type="range"]::-moz-range-thumb {
+        width: 26px;
+        height: 26px;
+        border-radius: 999px;
+        border: 2px solid rgba(255, 255, 255, 0.82);
+        background: var(--graphite);
+      }
+
+      .mode-tabs {
+        margin-top: 0.8rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+      }
+
+      .mode-tab {
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.08);
+        color: rgba(255, 255, 255, 0.66);
+        padding: 0.45rem 0.75rem;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.2em;
+        cursor: pointer;
+      }
+
+      .mode-tab.active {
+        border-color: rgba(226, 114, 91, 0.7);
+        background: rgba(226, 114, 91, 0.14);
+        color: #ffc7bb;
+      }
+
+      .masonry-preview {
+        border-radius: var(--radius-lg);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        padding: 0.75rem;
+        margin-top: 0.95rem;
+      }
+
+      .masonry-inner {
+        background: rgba(21, 20, 19, 0.25);
+        border-radius: var(--radius-md);
+        padding: 0.8rem;
+      }
+
+      .masonry-row {
+        display: flex;
+        margin-top: 0.45rem;
+      }
+
+      .masonry-brick {
+        flex: 1;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      .trust-section-grid,
+      .lab-grid,
+      .contact-grid {
+        display: grid;
+        gap: 1rem;
+        margin-top: 1.2rem;
+      }
+
+      .trust-card,
+      .lab-card,
+      .contact-card {
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 32px;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 1rem;
+      }
+
+      .map-wrap {
+        overflow: hidden;
+        border-radius: 30px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      iframe {
+        border: none;
+        width: 100%;
+        min-height: 300px;
+      }
+
+      .form-input {
+        width: 100%;
+        border-radius: 22px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.05);
+        padding: 0.95rem 1rem;
+        color: var(--text);
+        font: inherit;
+      }
+
+      .form-input:focus {
+        outline: none;
+        border-color: rgba(226, 114, 91, 0.68);
+        background: rgba(255, 255, 255, 0.07);
+      }
+
+      .footer-note {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+        color: rgba(255, 255, 255, 0.5);
+        display: flex;
+        justify-content: space-between;
+        gap: 0.7rem;
+        flex-wrap: wrap;
+        font-size: 0.9rem;
+      }
+
+      .reveal {
+        opacity: 0;
+        transform: translateY(24px);
+        transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+          transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      .reveal.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      @media (min-width: 768px) {
+        .hero-main {
+          padding: 2.35rem;
+        }
+
+        .palette-grid,
+        .trust-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .trust-section-grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .lab-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+
+      @media (min-width: 1024px) {
+        .desktop-nav {
+          display: flex;
+        }
+
+        .menu-btn,
+        .mobile-menu {
+          display: none !important;
+        }
+
+        .hero-grid {
+          grid-template-columns: 1.15fr 0.85fr;
+        }
+
+        .catalog-grid {
+          grid-template-columns: 0.9fr 1.1fr;
+        }
+
+        .contact-grid {
+          grid-template-columns: 1fr 0.92fr;
+        }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <div class="page">
+      <header class="sticky-header">
+        <div class="container">
+          <div class="nav-shell">
+            <div class="header-row">
+              <a href="#hero" class="brand">
+                <div class="brand-mark">
+                  <span></span><span></span><span></span><span></span>
+                </div>
+                <div>
+                  <div class="brand-eyebrow">ОАО</div>
+                  <div class="brand-name">Голицынский керамический завод</div>
+                </div>
+              </a>
+              <nav class="desktop-nav">
+                <a href="#catalog">Продукция</a>
+                <a href="#about">О заводе</a>
+                <a href="#lab">Лаборатория</a>
+                <a href="#contacts">Контакты</a>
+              </nav>
+              <div class="header-actions">
+                <a class="btn ghost catalog-download" href="#catalog">
+                  <i data-lucide="download"></i> Скачать каталог
+                </a>
+                <button class="menu-btn" id="menu-toggle" aria-label="Открыть меню">
+                  <i data-lucide="menu"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="mobile-menu" id="mobile-menu">
+            <a href="#catalog">Продукция</a>
+            <a href="#about">О заводе</a>
+            <a href="#lab">Лаборатория</a>
+            <a href="#contacts">Контакты</a>
+            <a class="btn primary catalog-download" href="#catalog">
+              <i data-lucide="download"></i> Скачать каталог
+            </a>
+          </div>
+        </div>
+      </header>
+
+      <main class="main">
+        <section class="container hero-grid" id="hero">
+          <article class="hero-main reveal">
+            <div class="brick-texture" id="hero-texture"></div>
+            <div class="hero-glow" id="hero-glow"></div>
+            <div class="hero-content">
+              <div class="pill"><i data-lucide="factory"></i> Premium Industrial</div>
+              <h1>Искусство керамического совершенства с 1944 года</h1>
+              <p class="lead">
+                Голицынский керамический завод создает материалы для архитектуры, которая
+                выглядит статусно, работает десятилетиями и передает ощущение надежности уже
+                с первого взгляда на фасад.
+              </p>
+              <div class="hero-cta">
+                <a class="btn primary" href="#catalog">
+                  Смотреть продукцию <i data-lucide="arrow-right"></i>
+                </a>
+                <a class="btn ghost" href="#contacts">
+                  Запросить консультацию <i data-lucide="chevron-right"></i>
+                </a>
+              </div>
+              <div class="trust-grid">
+                <div class="trust-mini">
+                  <i data-lucide="factory" style="color: #e8c39e"></i>
+                  <h3>80+ лет истории</h3>
+                  <p>С 1944 года завод формирует культуру работы с керамикой.</p>
+                </div>
+                <div class="trust-mini">
+                  <i data-lucide="flask-conical" style="color: #e8c39e"></i>
+                  <h3>Аккредитованная лаборатория</h3>
+                  <p>Контроль стабильности каждой производственной партии.</p>
+                </div>
+                <div class="trust-mini">
+                  <i data-lucide="leaf" style="color: #e8c39e"></i>
+                  <h3>Экологически чистая глина</h3>
+                  <p>Натуральный материал с выразительной премиальной фактурой.</p>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <aside class="hero-side">
+            <div class="card palette-card reveal">
+              <div class="kicker">Фирменная палитра</div>
+              <p style="margin: 0.6rem 0 0; font-size: 1.1rem">
+                Терракота, глубокий графит и песочно-бежевые нюансы
+              </p>
+              <div class="palette-grid">
+                <div class="swatch">
+                  <div
+                    class="swatch-view"
+                    style="background: linear-gradient(160deg, #e2725b, rgba(255, 255, 255, 0.7))"
+                  ></div>
+                  <p>Терракотовый</p>
+                  <small>#E2725B</small>
+                </div>
+                <div class="swatch">
+                  <div
+                    class="swatch-view"
+                    style="background: linear-gradient(160deg, #2d2d2d, rgba(255, 255, 255, 0.62))"
+                  ></div>
+                  <p>Глубокий графит</p>
+                  <small>#2D2D2D</small>
+                </div>
+                <div class="swatch">
+                  <div
+                    class="swatch-view"
+                    style="background: linear-gradient(160deg, #e9ddc8, rgba(255, 255, 255, 0.7))"
+                  ></div>
+                  <p>Песочно-бежевый</p>
+                  <small>#E9DDC8</small>
+                </div>
+              </div>
+            </div>
+
+            <div class="card texture-card brick-grid reveal">
+              <div class="kicker">Надежность материала</div>
+              <p style="font-size: 1.35rem; margin: 0.7rem 0">
+                Материал, который ощущается монументально и выглядит премиально.
+              </p>
+              <div class="brick-rows">
+                <div class="brick-row">
+                  <div
+                    class="brick-unit"
+                    style="background: linear-gradient(160deg, rgba(237, 188, 160, 0.95), rgba(226, 114, 91, 0.88))"
+                  ></div>
+                  <div
+                    class="brick-unit"
+                    style="background: linear-gradient(160deg, rgba(233, 221, 200, 0.94), rgba(214, 154, 124, 0.88))"
+                  ></div>
+                  <div
+                    class="brick-unit"
+                    style="background: linear-gradient(160deg, rgba(237, 188, 160, 0.95), rgba(226, 114, 91, 0.88))"
+                  ></div>
+                </div>
+                <div class="brick-row">
+                  <div
+                    class="brick-unit"
+                    style="background: linear-gradient(160deg, rgba(233, 221, 200, 0.94), rgba(214, 154, 124, 0.88))"
+                  ></div>
+                  <div
+                    class="brick-unit"
+                    style="background: linear-gradient(160deg, rgba(237, 188, 160, 0.95), rgba(226, 114, 91, 0.88))"
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </section>
+
+        <section class="section container" id="catalog">
+          <div class="card section-shell reveal">
+            <div class="kicker">Каталог</div>
+            <h2>Мы производим ВСЕ виды кирпича</h2>
+            <p class="section-sub">
+              Каталог построен как премиальная система материалов: от точной облицовки до
+              крупных керамических блоков и специализированных решений для строительных задач.
+            </p>
+
+            <div class="catalog-grid">
+              <div class="product-list" id="product-list">
+                <button class="product-btn active" data-product="facing">
+                  <h3>Облицовочный кирпич</h3>
+                  <small>классика и фактура</small>
+                  <p>Для фасадов и интерьеров, где важны статус, геометрия и долговечность.</p>
+                </button>
+                <button class="product-btn" data-product="handmade">
+                  <h3>Кирпич ручной формовки</h3>
+                  <small>ретро-стиль</small>
+                  <p>
+                    Материал с характером: благородная патина и ремесленная пластика поверхности.
+                  </p>
+                </button>
+                <button class="product-btn" data-product="blocks">
+                  <h3>Крупноформатные керамические блоки</h3>
+                  <small>скорость строительства</small>
+                  <p>Энергоэффективные стеновые решения для современных проектов.</p>
+                </button>
+                <button class="product-btn" data-product="special">
+                  <h3>Специализированный строительный кирпич</h3>
+                  <small>надежность</small>
+                  <p>Стабильные характеристики для сложных узлов и ответственных конструкций.</p>
+                </button>
+              </div>
+
+              <div class="catalog-detail">
+                <span class="chip">Выбранная категория</span>
+                <h3 id="detail-title" style="font-size: 1.8rem; margin: 0.8rem 0 0">
+                  Облицовочный кирпич
+                </h3>
+                <p id="detail-description" class="section-sub" style="max-width: none; margin-top: 0.6rem">
+                  Для фасадов, интерьерных акцентов и архитектуры, где важны точная геометрия,
+                  цветовая глубина и статусный внешний вид.
+                </p>
+                <ul class="detail-list" id="detail-list"></ul>
+              </div>
+            </div>
+
+            <div class="masonry-block">
+              <div class="pill">
+                <i data-lucide="sliders-horizontal"></i> Демонстрация кладки
+              </div>
+              <h3 style="font-size: 1.7rem; margin: 0.9rem 0 0.4rem">
+                Переключатель текстур и швов
+              </h3>
+              <p class="section-sub" style="margin-top: 0; max-width: none">
+                Меняйте характер фасада: тонкий аккуратный шов, контрастный графитовый ритм или
+                ремесленную пластику ручной формовки.
+              </p>
+              <div class="mode-picker">
+                <div style="display: flex; justify-content: space-between; gap: 1rem">
+                  <div>
+                    <div id="mode-name" style="font-weight: 600">Контрастный шов</div>
+                    <div id="mode-desc" style="color: rgba(255, 255, 255, 0.66); margin-top: 0.3rem">
+                      Глубокий графитовый рисунок шва делает кладку более выразительной.
+                    </div>
+                  </div>
+                  <span id="mode-index" class="chip">2 / 3</span>
+                </div>
+                <input type="range" id="mode-range" min="0" max="2" value="1" />
+                <div class="mode-tabs" id="mode-tabs"></div>
+              </div>
+              <div class="masonry-preview" id="masonry-preview"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section container" id="about">
+          <div class="card section-shell reveal">
+            <div class="kicker">Доверие</div>
+            <h2>Нас выбирают за стабильность материала, производства и сервиса</h2>
+            <p class="section-sub">
+              Премиальный образ бренда строится не только на эстетике, но и на инженерной
+              дисциплине: история, лаборатория и природное сырье работают как единая система
+              доверия.
+            </p>
+            <div class="trust-section-grid">
+              <div class="trust-card">
+                <i data-lucide="factory" style="color: #e8c39e"></i>
+                <h3>80+ лет истории</h3>
+                <p>С 1944 года завод развивает культуру производства керамики.</p>
+              </div>
+              <div class="trust-card">
+                <i data-lucide="flask-conical" style="color: #e8c39e"></i>
+                <h3>Собственная аккредитованная лаборатория</h3>
+                <p>Проверка сырья и контроль параметров каждой партии.</p>
+              </div>
+              <div class="trust-card">
+                <i data-lucide="leaf" style="color: #e8c39e"></i>
+                <h3>Экологически чистая глина</h3>
+                <p>Натуральная основа материала с выразительной текстурой.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section container" id="lab">
+          <div class="card section-shell reveal">
+            <div class="kicker">Лаборатория</div>
+            <h2>Собственная лаборатория как часть инженерной репутации завода</h2>
+            <p class="section-sub">
+              Лабораторный блок усиливает доверие к бренду: подтверждает свойства материалов и
+              сопровождает выбор архитектурных решений.
+            </p>
+            <div class="lab-grid">
+              <div class="lab-card">
+                <h3>Аккредитованная экспертиза</h3>
+                <ul>
+                  <li>Контроль физических характеристик и геометрии</li>
+                  <li>Проверка сырья и стабильности технологических режимов</li>
+                  <li>Поддержка проектировщиков и девелоперов</li>
+                </ul>
+              </div>
+              <div class="lab-card">
+                <h3>1944 → Сегодня</h3>
+                <p>
+                  Завод соединяет индустриальную надежность, экологичное сырье и визуальную
+                  выразительность премиальной кладки.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <footer class="section container" id="contacts">
+          <div class="card section-shell reveal">
+            <div class="contact-grid">
+              <div class="contact-card">
+                <div class="kicker">Контакты и карта</div>
+                <h2 style="font-size: clamp(1.6rem, 3vw, 2.2rem)">
+                  Производство, логистика и консультации в одном контуре
+                </h2>
+                <p class="section-sub" style="max-width: none">
+                  Оставьте заявку на подбор материала, фактур и технической консультации.
+                </p>
+                <div class="map-wrap">
+                  <iframe
+                    title="Карта Голицынского керамического завода"
+                    src="https://www.openstreetmap.org/export/embed.html?bbox=36.959%2C55.606%2C37.036%2C55.661&layer=mapnik&marker=55.635%2C36.995"
+                    loading="lazy"
+                  ></iframe>
+                </div>
+              </div>
+
+              <div
+                class="contact-card"
+                style="background: linear-gradient(160deg, rgba(226, 114, 91, 0.14), rgba(255, 255, 255, 0.04))"
+              >
+                <div class="kicker">Форма захвата лидов</div>
+                <h3 style="font-size: 1.9rem; margin: 0.6rem 0">Получить каталог и консультацию</h3>
+                <form id="lead-form" style="margin-top: 1rem">
+                  <label>
+                    <span style="display: block; margin-bottom: 0.4rem; color: rgba(255, 255, 255, 0.62)"
+                      >Ваше имя</span
+                    >
+                    <input class="form-input" type="text" required />
+                  </label>
+                  <label style="display: block; margin-top: 0.7rem">
+                    <span style="display: block; margin-bottom: 0.4rem; color: rgba(255, 255, 255, 0.62)"
+                      >Телефон или email</span
+                    >
+                    <input class="form-input" type="text" required />
+                  </label>
+                  <label style="display: block; margin-top: 0.7rem">
+                    <span style="display: block; margin-bottom: 0.4rem; color: rgba(255, 255, 255, 0.62)"
+                      >Кратко о проекте</span
+                    >
+                    <textarea class="form-input" rows="4" required></textarea>
+                  </label>
+                  <button class="btn primary" style="width: 100%; margin-top: 0.9rem; border-radius: 26px">
+                    Получить предложение <i data-lucide="arrow-right"></i>
+                  </button>
+                </form>
+                <div
+                  id="lead-state"
+                  style="
+                    margin-top: 0.8rem;
+                    border-radius: 26px;
+                    border: 1px solid rgba(255, 255, 255, 0.12);
+                    background: #1c1a18;
+                    padding: 0.8rem;
+                    color: rgba(255, 255, 255, 0.72);
+                  "
+                >
+                  Кнопка выполнена в «кирпичном» стиле: крупная, массивная и тактильно заметная.
+                </div>
+              </div>
+            </div>
+            <div class="footer-note">
+              <span>ОАО «Голицынский керамический завод» — premium industrial landing concept.</span>
+              <span style="display: flex; gap: 0.8rem">
+                <a href="#hero" style="color: inherit">Наверх</a>
+                <a href="#catalog" class="catalog-download" style="color: inherit">Скачать каталог</a>
+              </span>
+            </div>
+          </div>
+        </footer>
+      </main>
+    </div>
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+      const products = {
+        facing: {
+          title: "Облицовочный кирпич",
+          description:
+            "Для фасадов, интерьерных акцентов и архитектуры, где важны точная геометрия, цветовая глубина и статусный внешний вид.",
+          details: [
+            "Гладкие и фактурные поверхности",
+            "Натуральная палитра от песочно-бежевого до терракоты",
+            "Долговечность, морозостойкость и визуальная ритмика кладки",
+          ],
+        },
+        handmade: {
+          title: "Кирпич ручной формовки",
+          description:
+            "Материал для проектов с характером: бутик-отели, премиальные резиденции и реставрационные решения с теплым винтажным ощущением.",
+          details: [
+            "Неоднородная фактура и благородная патина",
+            "Выразительные швы и мягкая геометрия",
+            "Подходит для авторской архитектуры и акцентных зон",
+          ],
+        },
+        blocks: {
+          title: "Крупноформатные керамические блоки",
+          description:
+            "Крупноформатная керамика для энергоэффективных стеновых систем, где важны прочность, ритм монтажа и теплотехнический баланс.",
+          details: [
+            "Оптимизация сроков и логики монтажа",
+            "Основа для малоэтажных и коммерческих объектов",
+            "Материал для уверенной архитектурной геометрии",
+          ],
+        },
+        special: {
+          title: "Специализированный строительный кирпич",
+          description:
+            "Функциональные решения для несущих зон и специальных узлов, где критичны стабильность параметров и контроль качества.",
+          details: [
+            "Подбор под технические требования объекта",
+            "Стабильные характеристики на каждом этапе",
+            "Опора на лабораторный контроль и производственную дисциплину",
+          ],
+        },
+      };
+
+      const masonryModes = [
+        {
+          name: "Тонкий шов",
+          description:
+            "Акцент на ровную геометрию, чистую плоскость фасада и современную архитектурную дисциплину.",
+          gap: 10,
+          offset: 28,
+          radius: 24,
+          mortar: "rgba(233, 221, 200, 0.38)",
+          border: "rgba(255, 255, 255, 0.08)",
+          brick:
+            "linear-gradient(135deg, rgba(233, 221, 200, 0.94), rgba(226, 114, 91, 0.88))",
+          shadow: "0 16px 30px rgba(28, 23, 22, 0.22)",
+        },
+        {
+          name: "Контрастный шов",
+          description:
+            "Глубокий графитовый рисунок шва делает кладку более выразительной и подчеркивает премиальную фактуру кирпича.",
+          gap: 14,
+          offset: 36,
+          radius: 28,
+          mortar: "rgba(45, 45, 45, 0.82)",
+          border: "rgba(255, 255, 255, 0.12)",
+          brick:
+            "linear-gradient(135deg, rgba(229, 181, 149, 0.96), rgba(221, 109, 84, 0.94))",
+          shadow: "0 18px 32px rgba(12, 12, 12, 0.24)",
+        },
+        {
+          name: "Ручная кладка",
+          description:
+            "Мягкий ритм, увеличенный шов и легкая пластика кирпича создают атмосферу ремесленной архитектуры.",
+          gap: 18,
+          offset: 42,
+          radius: 32,
+          mortar: "rgba(214, 195, 168, 0.62)",
+          border: "rgba(255, 255, 255, 0.1)",
+          brick:
+            "linear-gradient(135deg, rgba(197, 102, 78, 0.98), rgba(144, 70, 53, 0.92))",
+          shadow: "0 20px 34px rgba(44, 28, 23, 0.28)",
+        },
+      ];
+
+      const productButtons = [...document.querySelectorAll(".product-btn")];
+      const detailTitle = document.getElementById("detail-title");
+      const detailDescription = document.getElementById("detail-description");
+      const detailList = document.getElementById("detail-list");
+
+      function setProduct(id) {
+        const product = products[id];
+        if (!product) return;
+        detailTitle.textContent = product.title;
+        detailDescription.textContent = product.description;
+        detailList.innerHTML = product.details.map((item) => `<li>${item}</li>`).join("");
+        productButtons.forEach((btn) =>
+          btn.classList.toggle("active", btn.dataset.product === id),
+        );
+      }
+
+      productButtons.forEach((btn) => {
+        btn.addEventListener("click", () => setProduct(btn.dataset.product));
+      });
+      setProduct("facing");
+
+      const modeName = document.getElementById("mode-name");
+      const modeDesc = document.getElementById("mode-desc");
+      const modeIndex = document.getElementById("mode-index");
+      const modeRange = document.getElementById("mode-range");
+      const modeTabs = document.getElementById("mode-tabs");
+      const masonryPreview = document.getElementById("masonry-preview");
+
+      masonryModes.forEach((mode, index) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "mode-tab";
+        btn.textContent = mode.name;
+        btn.addEventListener("click", () => updateMode(index));
+        modeTabs.appendChild(btn);
+      });
+
+      function renderPreview(mode) {
+        masonryPreview.style.backgroundColor = mode.mortar;
+        let rows = '<div class="masonry-inner">';
+        for (let row = 0; row < 5; row += 1) {
+          const bricksCount = row % 2 === 0 ? 5 : 4;
+          const shift = row % 2 === 0 ? 0 : mode.offset;
+          rows += `<div class="masonry-row" style="gap:${mode.gap}px; transform:translateX(${shift}px)">`;
+          for (let b = 0; b < bricksCount; b += 1) {
+            const height = b % 3 === 0 ? 84 : 70;
+            rows += `<div class="masonry-brick" style="min-height:${height}px;border-radius:${mode.radius}px;border-color:${mode.border};background:${mode.brick};box-shadow:${mode.shadow}"></div>`;
+          }
+          rows += "</div>";
+        }
+        rows += "</div>";
+        masonryPreview.innerHTML = rows;
+      }
+
+      function updateMode(index) {
+        const mode = masonryModes[index];
+        if (!mode) return;
+        modeName.textContent = mode.name;
+        modeDesc.textContent = mode.description;
+        modeIndex.textContent = `${index + 1} / ${masonryModes.length}`;
+        modeRange.value = index;
+        [...modeTabs.children].forEach((tab, i) => tab.classList.toggle("active", i === index));
+        renderPreview(mode);
+      }
+
+      modeRange.addEventListener("input", (event) => {
+        updateMode(Number(event.target.value));
+      });
+      updateMode(1);
+
+      const menuToggle = document.getElementById("menu-toggle");
+      const mobileMenu = document.getElementById("mobile-menu");
+      menuToggle.addEventListener("click", () => {
+        mobileMenu.classList.toggle("open");
+      });
+      mobileMenu.querySelectorAll("a").forEach((link) => {
+        link.addEventListener("click", () => mobileMenu.classList.remove("open"));
+      });
+
+      const leadForm = document.getElementById("lead-form");
+      const leadState = document.getElementById("lead-state");
+      leadForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        leadState.textContent =
+          "Спасибо! Заявка принята: менеджер свяжется для подбора линейки кирпича и каталога.";
+      });
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("visible");
+              observer.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.18 },
+      );
+      document.querySelectorAll(".reveal").forEach((item) => observer.observe(item));
+
+      const heroTexture = document.getElementById("hero-texture");
+      const heroGlow = document.getElementById("hero-glow");
+      window.addEventListener("scroll", () => {
+        const y = Math.min(window.scrollY, 700);
+        heroTexture.style.transform = `translateY(${-0.13 * y}px)`;
+        heroGlow.style.transform = `translateY(${0.08 * y}px)`;
+      });
+
+      const catalogHtml = `<!doctype html><html lang="ru"><head><meta charset="UTF-8"><title>Каталог Голицынского керамического завода</title></head><body style="font-family:Arial,sans-serif;background:#f6f0e6;color:#2d2d2d;padding:40px;"><h1>ОАО «Голицынский керамический завод»</h1><p>Мы производим ВСЕ виды кирпича.</p><ul><li>Облицовочный кирпич (классика и фактура)</li><li>Кирпич ручной формовки (ретро-стиль)</li><li>Крупноформатные керамические блоки</li><li>Специализированный строительный кирпич</li></ul></body></html>`;
+      const catalogUrl = URL.createObjectURL(
+        new Blob([catalogHtml], { type: "text/html;charset=utf-8" }),
+      );
+      document.querySelectorAll(".catalog-download").forEach((link) => {
+        link.href = catalogUrl;
+        link.download = "golitsyn-ceramic-plant-catalog.html";
+      });
+
+      window.addEventListener("beforeunload", () => URL.revokeObjectURL(catalogUrl));
+
+      lucide.createIcons();
+    </script>
   </body>
 </html>
