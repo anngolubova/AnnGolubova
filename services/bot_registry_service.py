@@ -5,6 +5,7 @@ import logging
 from aiogram import Bot
 from aiogram.exceptions import TelegramBadRequest, TelegramUnauthorizedError
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from bot.runtime import BotRuntime
@@ -26,13 +27,25 @@ class BotRegistryService:
     ) -> None:
         async with self._session_factory() as session:
             async with session.begin():
+                indexed_tokens: list[tuple[int, str]] = []
+                seen_tokens: set[str] = set()
+                for index, token in enumerate(tokens):
+                    if token in seen_tokens:
+                        logger.warning(
+                            "Duplicate token in BOT_TOKENS ignored at index=%s", index
+                        )
+                        continue
+                    seen_tokens.add(token)
+                    indexed_tokens.append((index, token))
+
                 existing_by_token: dict[str, BotModel] = {}
-                if tokens:
-                    existing_stmt = select(BotModel).where(BotModel.token.in_(tokens))
+                if indexed_tokens:
+                    token_values = [token for _, token in indexed_tokens]
+                    existing_stmt = select(BotModel).where(BotModel.token.in_(token_values))
                     existing_rows = (await session.execute(existing_stmt)).scalars().all()
                     existing_by_token = {row.token: row for row in existing_rows}
 
-                for index, token in enumerate(tokens):
+                for index, token in indexed_tokens:
                     admin_chat_id = (
                         bot_admin_chat_ids[index]
                         if index < len(bot_admin_chat_ids)
@@ -67,7 +80,7 @@ class BotRegistryService:
                 # If BOT_TOKENS is empty, all legacy bots must be deactivated.
                 legacy_stmt = select(BotModel).where(BotModel.owner_admin_id.is_(None))
                 legacy_rows = (await session.execute(legacy_stmt)).scalars().all()
-                active_tokens = set(tokens)
+                active_tokens = {token for _, token in indexed_tokens}
                 for row in legacy_rows:
                     if row.token not in active_tokens:
                         row.is_active = False
@@ -170,28 +183,74 @@ class BotRegistryService:
                 existing_stmt = select(BotModel).where(BotModel.token == token).limit(1)
                 existing = (await session.execute(existing_stmt)).scalar_one_or_none()
                 if existing is not None:
+                    if existing.owner_admin_id == admin.id:
+                        existing.username = username
+                        existing.title = title or existing.title or username
+                        existing.admin_chat_id = admin_telegram_id
+                        existing.is_active = True
+                        await session.flush()
+                        return BotRuntime(
+                            db_bot_id=existing.id,
+                            token=existing.token,
+                            username=existing.username,
+                            title=existing.title,
+                            admin_chat_id=existing.admin_chat_id,
+                            owner_admin_telegram_id=admin_telegram_id,
+                            is_active=bool(existing.is_active),
+                        )
                     raise ValueError("Этот токен уже используется в системе.")
 
-                bot_row = BotModel(
-                    owner_admin_id=admin.id,
-                    token=token,
-                    bot_telegram_id=bot_telegram_id,
-                    username=username,
-                    title=title or username,
-                    admin_chat_id=admin_telegram_id,
-                    is_active=True,
-                )
-                session.add(bot_row)
-                await session.flush()
-                return BotRuntime(
-                    db_bot_id=bot_row.id,
-                    token=bot_row.token,
-                    username=bot_row.username,
-                    title=bot_row.title,
-                    admin_chat_id=bot_row.admin_chat_id,
-                    owner_admin_telegram_id=admin_telegram_id,
-                    is_active=bool(bot_row.is_active),
-                )
+                existing_bot_id_stmt = select(BotModel).where(
+                    BotModel.bot_telegram_id == bot_telegram_id
+                ).limit(1)
+                existing_by_bot_id = (
+                    await session.execute(existing_bot_id_stmt)
+                ).scalar_one_or_none()
+                if existing_by_bot_id is not None:
+                    if existing_by_bot_id.owner_admin_id == admin.id:
+                        # Bot token rotation for the same owner.
+                        existing_by_bot_id.token = token
+                        existing_by_bot_id.username = username
+                        existing_by_bot_id.title = title or existing_by_bot_id.title or username
+                        existing_by_bot_id.admin_chat_id = admin_telegram_id
+                        existing_by_bot_id.is_active = True
+                        await session.flush()
+                        return BotRuntime(
+                            db_bot_id=existing_by_bot_id.id,
+                            token=existing_by_bot_id.token,
+                            username=existing_by_bot_id.username,
+                            title=existing_by_bot_id.title,
+                            admin_chat_id=existing_by_bot_id.admin_chat_id,
+                            owner_admin_telegram_id=admin_telegram_id,
+                            is_active=bool(existing_by_bot_id.is_active),
+                        )
+                    raise ValueError("Этот бот уже принадлежит другому администратору.")
+
+                try:
+                    bot_row = BotModel(
+                        owner_admin_id=admin.id,
+                        token=token,
+                        bot_telegram_id=bot_telegram_id,
+                        username=username,
+                        title=title or username,
+                        admin_chat_id=admin_telegram_id,
+                        is_active=True,
+                    )
+                    session.add(bot_row)
+                    await session.flush()
+                    return BotRuntime(
+                        db_bot_id=bot_row.id,
+                        token=bot_row.token,
+                        username=bot_row.username,
+                        title=bot_row.title,
+                        admin_chat_id=bot_row.admin_chat_id,
+                        owner_admin_telegram_id=admin_telegram_id,
+                        is_active=bool(bot_row.is_active),
+                    )
+                except IntegrityError as error:
+                    raise ValueError(
+                        "Не удалось сохранить бота. Проверьте уникальность токена и повторите."
+                    ) from error
 
     async def toggle_admin_bot(
         self,
