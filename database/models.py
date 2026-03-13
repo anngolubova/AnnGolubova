@@ -19,6 +19,19 @@ class MessageDirection(str, Enum):
     BROADCAST = "broadcast"
 
 
+class AdminAccount(TimestampMixin, Base):
+    __tablename__ = "admins"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    telegram_id: Mapped[int] = mapped_column(BigInteger, unique=True, index=True, nullable=False)
+    username: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    first_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    last_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    bots = relationship("BotModel", back_populates="owner_admin")
+
+
 class User(TimestampMixin, Base):
     __tablename__ = "users"
 
@@ -37,12 +50,19 @@ class BotModel(TimestampMixin, Base):
     __tablename__ = "bots"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    owner_admin_id: Mapped[int | None] = mapped_column(
+        ForeignKey("admins.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
     token: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     bot_telegram_id: Mapped[int | None] = mapped_column(BigInteger, unique=True, nullable=True)
     username: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    title: Mapped[str | None] = mapped_column(String(255), nullable=True)
     admin_chat_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
+    owner_admin = relationship("AdminAccount", back_populates="bots")
     dialogs = relationship("Dialog", back_populates="bot")
 
 

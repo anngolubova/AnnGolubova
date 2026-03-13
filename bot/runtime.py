@@ -10,7 +10,10 @@ class BotRuntime:
     db_bot_id: int
     token: str
     username: str | None
+    title: str | None
     admin_chat_id: int
+    owner_admin_telegram_id: int | None
+    is_active: bool
 
 
 @dataclass(slots=True)

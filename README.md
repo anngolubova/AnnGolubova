@@ -1,15 +1,31 @@
-# Telegram Feedback Bot (aiogram 3, Clean Architecture)
+# Telegram Bot Constructor + Feedback Bridge (aiogram 3)
 
-Production-ready Telegram Feedback Bot на Python и aiogram 3.
-Бот выступает анонимным мостом между пользователем и администратором.
+Production-ready проект на Python + aiogram 3:  
+бот-конструктор с личными кабинетами админов и динамическим управлением несколькими feedback-ботами.
 
-## Основные возможности
+## Что теперь умеет система
 
-- анонимный канал связи user → admin → user
+### 1) Конструктор-бот (Admin Bot)
+
+- персональный кабинет каждого админа
+- кнопочная навигация:
+  - `➕ Добавить бота`
+  - `🤖 Мои боты`
+  - `📊 Моя статистика`
+  - `📥 Выгрузка базы`
+- добавление нового Telegram-бота по токену из BotFather
+- включение/выключение каждого бота прямо из кабинета
+- выгрузка базы пользователей в CSV
+
+### 2) Управляемые feedback-боты
+
+- анонимный мост user → admin → user
 - авто-регистрация пользователей
 - создание и хранение диалогов
-- детекция ответов администратора по reply
-- маршрутизация сообщений с привязкой к диалогу
+- определение ответов администратора по `reply`
+- threading диалогов
+- рассылки (`/broadcast`)
+- статистика (`/stats`)
 - поддержка контента:
   - text
   - voice
@@ -17,13 +33,15 @@ Production-ready Telegram Feedback Bot на Python и aiogram 3.
   - video
   - audio
   - documents
-- статистика (`/stats`)
-- рассылки (`/broadcast`)
-- поддержка нескольких ботов через список токенов
-- Redis FSM (состояния администратора)
-- SQLite + SQLAlchemy
+
+### 3) Платформенные возможности
+
+- multi-tenant: у каждого админа свои боты и свои данные
+- динамический запуск/остановка управляемых ботов без рестарта приложения
+- SQLite + SQLAlchemy (async)
+- Redis FSM
 - Docker-ready
-- логирование и централизованная обработка ошибок
+- логирование и глобальный error handler
 
 ## Архитектура (папки)
 
@@ -37,6 +55,7 @@ Production-ready Telegram Feedback Bot на Python и aiogram 3.
 ├── database/
 │   ├── __init__.py
 │   ├── base.py
+│   ├── migrations.py
 │   ├── models.py
 │   └── session.py
 ├── bot/
@@ -46,18 +65,22 @@ Production-ready Telegram Feedback Bot на Python и aiogram 3.
 ├── handlers/
 │   ├── __init__.py
 │   ├── admin.py
+│   ├── cabinet.py
 │   ├── errors.py
 │   └── user.py
 ├── services/
 │   ├── __init__.py
 │   ├── bot_registry_service.py
 │   ├── broadcast_service.py
+│   ├── cabinet_service.py
 │   ├── dialog_service.py
+│   ├── polling_manager.py
 │   ├── routing_service.py
 │   └── stats_service.py
 ├── keyboards/
 │   ├── __init__.py
-│   └── admin.py
+│   ├── admin.py
+│   └── cabinet.py
 └── utils/
     ├── __init__.py
     ├── config.py
@@ -67,28 +90,35 @@ Production-ready Telegram Feedback Bot на Python и aiogram 3.
 
 ## Модели БД
 
+- `admins`
+- `bots`
 - `users`
 - `dialogs`
 - `messages`
-- `bots`
+
+## Конфигурация `.env`
+
+```env
+# Токен конструктора (кабинеты админов)
+CONSTRUCTOR_BOT_TOKEN=...
+
+# Опционально: seed-набор уже готовых feedback-ботов
+BOT_TOKENS=
+
+# Для seed-ботов
+ADMIN_CHAT_ID=
+# BOT_ADMIN_CHAT_IDS=
+
+DATABASE_URL=sqlite+aiosqlite:///./data/feedback_bot.db
+REDIS_URL=redis://localhost:6379/0
+MANAGED_BOTS_SYNC_INTERVAL_SECONDS=8
+LOG_LEVEL=INFO
+```
 
 ## Локальный запуск
 
-1. Создайте `.env` из примера:
-
 ```bash
 cp .env.example .env
-```
-
-2. Укажите переменные:
-
-- `BOT_TOKENS` — токены через запятую
-- `ADMIN_CHAT_ID` — id админ-чата/группы
-- `BOT_ADMIN_CHAT_IDS` — (опционально) список chat id по порядку токенов
-
-3. Установите зависимости и запустите:
-
-```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -102,12 +132,12 @@ cp .env.example .env
 docker compose up --build -d
 ```
 
-## Как работает диалог
+## Как работает в проде
 
-1. Пользователь пишет боту.
-2. Бот копирует сообщение в админ-чат.
-3. Администратор отвечает reply на пересланное сообщение.
-4. Бот копирует ответ админа обратно пользователю.
-5. В БД сохраняется связка сообщений для маршрутизации и статистики.
+1. Админ открывает конструктор-бота (`/start`), получает личный кабинет.
+2. Добавляет токен нового бота через кнопку `➕ Добавить бота`.
+3. Платформа валидирует токен, сохраняет бота в БД и автоматически поднимает polling.
+4. Пользователи пишут уже в подключенный feedback-бот.
+5. Сообщения уходят админу, ответы админа (reply) возвращаются пользователю.
 
-> Telegram ID администратора не раскрывается пользователю — отправителем для пользователя всегда выступает бот.
+> ID администратора остаётся скрытым: пользователь всегда видит отправителем только бота.

@@ -1,0 +1,163 @@
+from __future__ import annotations
+
+import csv
+from dataclasses import dataclass
+from io import BytesIO, StringIO
+
+from aiogram.types import User as TelegramUser
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+from bot.runtime import BotRuntime
+from database.models import AdminAccount, BotModel, Dialog, MessageRecord, User
+from services.bot_registry_service import BotRegistryService
+
+
+@dataclass(slots=True)
+class AdminDashboard:
+    bots_total: int
+    bots_active: int
+    users_total: int
+    dialogs_total: int
+    messages_total: int
+
+
+@dataclass(slots=True)
+class AdminBotCard:
+    runtime: BotRuntime
+    users_total: int
+    dialogs_total: int
+    messages_total: int
+
+
+class CabinetService:
+    def __init__(
+        self,
+        session_factory: async_sessionmaker[AsyncSession],
+        registry: BotRegistryService,
+    ) -> None:
+        self._session_factory = session_factory
+        self._registry = registry
+
+    async def register_admin(self, tg_admin: TelegramUser) -> None:
+        await self._registry.upsert_admin(
+            telegram_id=tg_admin.id,
+            username=tg_admin.username,
+            first_name=tg_admin.first_name,
+            last_name=tg_admin.last_name,
+        )
+
+    async def add_bot(self, *, admin_telegram_id: int, token: str, title: str | None) -> BotRuntime:
+        return await self._registry.add_bot_for_admin(
+            admin_telegram_id=admin_telegram_id,
+            token=token.strip(),
+            title=title.strip() if title else None,
+        )
+
+    async def list_admin_bots_with_stats(self, admin_telegram_id: int) -> list[AdminBotCard]:
+        runtimes = await self._registry.list_admin_bots(admin_telegram_id)
+        cards: list[AdminBotCard] = []
+        for runtime in runtimes:
+            users_total, dialogs_total, messages_total = await self._get_bot_totals(runtime.db_bot_id)
+            cards.append(
+                AdminBotCard(
+                    runtime=runtime,
+                    users_total=users_total,
+                    dialogs_total=dialogs_total,
+                    messages_total=messages_total,
+                )
+            )
+        return cards
+
+    async def toggle_bot(self, *, admin_telegram_id: int, db_bot_id: int) -> bool:
+        return await self._registry.toggle_admin_bot(
+            admin_telegram_id=admin_telegram_id,
+            db_bot_id=db_bot_id,
+        )
+
+    async def get_dashboard(self, admin_telegram_id: int) -> AdminDashboard:
+        async with self._session_factory() as session:
+            base_query = (
+                select(BotModel.id)
+                .join(AdminAccount, AdminAccount.id == BotModel.owner_admin_id)
+                .where(AdminAccount.telegram_id == admin_telegram_id)
+            )
+            bot_ids = [row[0] for row in (await session.execute(base_query)).all()]
+            if not bot_ids:
+                return AdminDashboard(
+                    bots_total=0,
+                    bots_active=0,
+                    users_total=0,
+                    dialogs_total=0,
+                    messages_total=0,
+                )
+
+            bots_total_stmt = select(func.count(BotModel.id)).where(BotModel.id.in_(bot_ids))
+            bots_active_stmt = select(func.count(BotModel.id)).where(
+                BotModel.id.in_(bot_ids), BotModel.is_active.is_(True)
+            )
+            users_total_stmt = select(func.count(func.distinct(Dialog.user_id))).where(
+                Dialog.bot_id.in_(bot_ids)
+            )
+            dialogs_total_stmt = select(func.count(Dialog.id)).where(Dialog.bot_id.in_(bot_ids))
+            messages_total_stmt = select(func.count(MessageRecord.id)).where(
+                MessageRecord.bot_id.in_(bot_ids)
+            )
+
+            return AdminDashboard(
+                bots_total=int((await session.execute(bots_total_stmt)).scalar_one() or 0),
+                bots_active=int((await session.execute(bots_active_stmt)).scalar_one() or 0),
+                users_total=int((await session.execute(users_total_stmt)).scalar_one() or 0),
+                dialogs_total=int((await session.execute(dialogs_total_stmt)).scalar_one() or 0),
+                messages_total=int((await session.execute(messages_total_stmt)).scalar_one() or 0),
+            )
+
+    async def export_users_csv(self, admin_telegram_id: int) -> tuple[str, bytes]:
+        async with self._session_factory() as session:
+            stmt = (
+                select(
+                    BotModel.username,
+                    User.telegram_id,
+                    User.username,
+                    User.first_name,
+                    User.last_name,
+                    User.language_code,
+                    Dialog.created_at,
+                )
+                .join(Dialog, Dialog.bot_id == BotModel.id)
+                .join(User, User.id == Dialog.user_id)
+                .join(AdminAccount, AdminAccount.id == BotModel.owner_admin_id)
+                .where(AdminAccount.telegram_id == admin_telegram_id)
+                .order_by(Dialog.created_at.desc())
+            )
+            rows = (await session.execute(stmt)).all()
+
+        buffer = StringIO()
+        writer = csv.writer(buffer)
+        writer.writerow(
+            [
+                "bot_username",
+                "user_telegram_id",
+                "username",
+                "first_name",
+                "last_name",
+                "language_code",
+                "dialog_created_at",
+            ]
+        )
+        for row in rows:
+            writer.writerow(row)
+
+        payload = BytesIO(buffer.getvalue().encode("utf-8"))
+        payload.seek(0)
+        return "users_export.csv", payload.read()
+
+    async def _get_bot_totals(self, bot_id: int) -> tuple[int, int, int]:
+        async with self._session_factory() as session:
+            users_stmt = select(func.count(func.distinct(Dialog.user_id))).where(Dialog.bot_id == bot_id)
+            dialogs_stmt = select(func.count(Dialog.id)).where(Dialog.bot_id == bot_id)
+            messages_stmt = select(func.count(MessageRecord.id)).where(MessageRecord.bot_id == bot_id)
+            users_total = int((await session.execute(users_stmt)).scalar_one() or 0)
+            dialogs_total = int((await session.execute(dialogs_stmt)).scalar_one() or 0)
+            messages_total = int((await session.execute(messages_stmt)).scalar_one() or 0)
+            return users_total, dialogs_total, messages_total
