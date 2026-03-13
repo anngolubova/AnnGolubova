@@ -832,7 +832,7 @@ export default function App() {
           </Reveal>
         </section>
 
-        <section id="contacts" className="mx-auto mt-8 max-w-7xl">
+        <footer id="contacts" className="mx-auto mt-8 max-w-7xl">
           <Reveal className="rounded-[40px] border border-white/10 bg-[#24211f] p-6 shadow-[0_24px_100px_rgba(0,0,0,0.22)] sm:p-10">
             <div className="grid gap-6 xl:grid-cols-[1fr_0.92fr]">
               <div className="overflow-hidden rounded-[34px] border border-white/10 bg-white/[0.04]">
@@ -957,7 +957,7 @@ export default function App() {
               </div>
             </div>
           </Reveal>
-        </section>
+        </footer>
       </main>
     </div>
   )
