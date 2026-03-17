@@ -29,6 +29,19 @@ class AddBotState(StatesGroup):
 
 def get_cabinet_router(cabinet_service: CabinetService) -> Router:
     router = Router(name="constructor_cabinet_router")
+    add_bot_aliases = {BTN_ADD_BOT, "Добавить бота"}
+    my_bots_aliases = {BTN_MY_BOTS, "Мои боты"}
+    my_stats_aliases = {BTN_MY_STATS, "Моя статистика"}
+    export_aliases = {BTN_EXPORT_DB, "Выгрузка базы"}
+
+    def _normalized_text(text: str | None) -> str:
+        if not text:
+            return ""
+        # Normalize common mobile emoji variation selector.
+        return text.replace("\uFE0F", "").strip()
+
+    def _in_aliases(message: Message, aliases: set[str]) -> bool:
+        return _normalized_text(message.text) in aliases
 
     async def _safe_edit_text(callback: CallbackQuery, *, text: str, reply_markup=None) -> None:
         if callback.message is None:
@@ -57,13 +70,39 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
             await cabinet_service.register_admin(message.from_user)
         await message.answer("Личный кабинет открыт.", reply_markup=get_cabinet_keyboard())
 
+    @router.message(F.chat.type == ChatType.PRIVATE, Command("mybots"))
+    async def my_bots_command(message: Message) -> None:
+        if message.from_user is None:
+            return
+        await cabinet_service.register_admin(message.from_user)
+        cards = await cabinet_service.list_admin_bots_with_stats(message.from_user.id)
+        if not cards:
+            await message.answer("У вас пока нет подключённых ботов. Нажмите 'Добавить бота'.")
+            return
+        await message.answer("Ваши боты:", reply_markup=get_bots_inline_keyboard(cards))
+
+    @router.message(F.chat.type == ChatType.PRIVATE, Command("mystats"))
+    async def my_stats_command(message: Message) -> None:
+        if message.from_user is None:
+            return
+        await cabinet_service.register_admin(message.from_user)
+        snapshot = await cabinet_service.get_dashboard(message.from_user.id)
+        await message.answer(
+            "Ваш кабинет:\n"
+            f"• Ботов: {snapshot.bots_total}\n"
+            f"• Активных ботов: {snapshot.bots_active}\n"
+            f"• Пользователей: {snapshot.users_total}\n"
+            f"• Диалогов: {snapshot.dialogs_total}\n"
+            f"• Сообщений: {snapshot.messages_total}"
+        )
+
     @router.message(F.chat.type == ChatType.PRIVATE, Command("cancel"))
     @router.message(F.chat.type == ChatType.PRIVATE, F.text == BTN_CANCEL)
     async def cancel_flow(message: Message, state: FSMContext) -> None:
         await state.clear()
         await message.answer("Действие отменено.", reply_markup=get_cabinet_keyboard())
 
-    @router.message(F.chat.type == ChatType.PRIVATE, F.text == BTN_ADD_BOT)
+    @router.message(F.chat.type == ChatType.PRIVATE, lambda message: _in_aliases(message, add_bot_aliases))
     async def add_bot_clicked(message: Message, state: FSMContext) -> None:
         if message.from_user is not None:
             await cabinet_service.register_admin(message.from_user)
@@ -126,7 +165,7 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
             reply_markup=get_cabinet_keyboard(),
         )
 
-    @router.message(F.chat.type == ChatType.PRIVATE, F.text == BTN_MY_BOTS)
+    @router.message(F.chat.type == ChatType.PRIVATE, lambda message: _in_aliases(message, my_bots_aliases))
     async def show_my_bots(message: Message) -> None:
         if message.from_user is None:
             return
@@ -215,7 +254,7 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
             reply_markup=get_bots_inline_keyboard(cards) if cards else None,
         )
 
-    @router.message(F.chat.type == ChatType.PRIVATE, F.text == BTN_MY_STATS)
+    @router.message(F.chat.type == ChatType.PRIVATE, lambda message: _in_aliases(message, my_stats_aliases))
     async def show_dashboard(message: Message) -> None:
         if message.from_user is None:
             return
@@ -230,7 +269,7 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
             f"• Сообщений: {snapshot.messages_total}"
         )
 
-    @router.message(F.chat.type == ChatType.PRIVATE, F.text == BTN_EXPORT_DB)
+    @router.message(F.chat.type == ChatType.PRIVATE, lambda message: _in_aliases(message, export_aliases))
     async def export_database(message: Message) -> None:
         if message.from_user is None:
             return
@@ -242,6 +281,15 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
         await message.answer_document(
             BufferedInputFile(payload, filename=filename),
             caption="Выгрузка базы пользователей готова.",
+        )
+
+    @router.message(F.chat.type == ChatType.PRIVATE)
+    async def unknown_private_input(message: Message, state: FSMContext) -> None:
+        if await state.get_state() is not None:
+            return
+        await message.answer(
+            "Выберите действие через кнопки меню или используйте /cabinet.",
+            reply_markup=get_cabinet_keyboard(),
         )
 
     return router
