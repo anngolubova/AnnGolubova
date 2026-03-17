@@ -8,7 +8,7 @@ from aiogram import Bot
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 
-from bot.factory import create_constructor_dispatcher, create_dispatcher
+from bot.factory import create_constructor_dispatcher_async, create_dispatcher_async
 from bot.runtime import BotRuntime, ServiceContainer
 from database.migrations import run_sqlite_compat_migrations
 from database.session import create_engine_and_session_factory, init_database
@@ -26,7 +26,7 @@ async def run_feedback_bot(runtime: BotRuntime, services: ServiceContainer, redi
         token=runtime.token,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
-    dispatcher = create_dispatcher(services, redis_url=redis_url)
+    dispatcher = await create_dispatcher_async(services, redis_url=redis_url)
 
     logger.info(
         "Starting polling for bot username=@%s admin_chat_id=%s",
@@ -56,7 +56,7 @@ async def run_constructor_bot(
         token=constructor_bot_token,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
-    dispatcher = create_constructor_dispatcher(
+    dispatcher = await create_constructor_dispatcher_async(
         session_factory=session_factory,
         redis_url=redis_url,
     )

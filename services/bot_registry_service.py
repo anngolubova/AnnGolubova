@@ -114,28 +114,45 @@ class BotRegistryService:
         first_name: str | None,
         last_name: str | None,
     ) -> AdminAccount:
-        async with self._session_factory() as session:
-            async with session.begin():
-                stmt = select(AdminAccount).where(AdminAccount.telegram_id == telegram_id).limit(1)
-                admin = (await session.execute(stmt)).scalar_one_or_none()
-                if admin is None:
-                    admin = AdminAccount(
-                        telegram_id=telegram_id,
-                        username=username,
-                        first_name=first_name,
-                        last_name=last_name,
-                        is_active=True,
-                    )
-                    session.add(admin)
-                    await session.flush()
-                    return admin
+        # Handle concurrent /start or button presses safely:
+        # if another transaction inserts the same admin between SELECT and INSERT,
+        # retry once and convert to update path.
+        for attempt in range(2):
+            async with self._session_factory() as session:
+                try:
+                    async with session.begin():
+                        stmt = select(AdminAccount).where(
+                            AdminAccount.telegram_id == telegram_id
+                        ).limit(1)
+                        admin = (await session.execute(stmt)).scalar_one_or_none()
+                        if admin is None:
+                            admin = AdminAccount(
+                                telegram_id=telegram_id,
+                                username=username,
+                                first_name=first_name,
+                                last_name=last_name,
+                                is_active=True,
+                            )
+                            session.add(admin)
+                            await session.flush()
+                            return admin
 
-                admin.username = username
-                admin.first_name = first_name
-                admin.last_name = last_name
-                admin.is_active = True
-                await session.flush()
-                return admin
+                        admin.username = username
+                        admin.first_name = first_name
+                        admin.last_name = last_name
+                        admin.is_active = True
+                        await session.flush()
+                        return admin
+                except IntegrityError:
+                    if attempt == 0:
+                        logger.warning(
+                            "Admin upsert raced on telegram_id=%s, retrying once.",
+                            telegram_id,
+                        )
+                        continue
+                    raise
+
+        raise RuntimeError("Admin upsert retry loop exited unexpectedly.")
 
     async def list_admin_bots(self, admin_telegram_id: int) -> list[BotRuntime]:
         async with self._session_factory() as session:
