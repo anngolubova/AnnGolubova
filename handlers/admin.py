@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 
 from aiogram import F, Router
+from aiogram.enums import ChatType
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -134,5 +135,20 @@ def get_admin_router(services: ServiceContainer) -> Router:
         except (TelegramForbiddenError, TelegramBadRequest):
             logger.exception("Failed to deliver admin reply for dialog_id=%s", dialog_target.dialog_id)
             await message.answer("Не удалось доставить сообщение пользователю.")
+
+    @router.message(is_admin_chat, F.chat.type == ChatType.PRIVATE)
+    async def admin_private_fallback(message: Message) -> None:
+        if message.reply_to_message is not None:
+            await message.answer(
+                "Для ответа пользователю используйте только: текст, голос, фото, видео, аудио, документ."
+            )
+            return
+
+        await message.answer(
+            "Панель администратора:\n"
+            "• Ответ пользователю: реплай на пересланное сообщение\n"
+            "• /stats — статистика\n"
+            "• /broadcast — рассылка"
+        )
 
     return router
