@@ -62,13 +62,14 @@ def get_cancel_keyboard(lang: str = "ru") -> ReplyKeyboardMarkup:
 def get_bots_inline_keyboard(cards: Sequence[AdminBotCard], lang: str = "ru") -> InlineKeyboardMarkup:
     normalized = _normalize_lang(lang)
     toggle_text = TOGGLE_BUTTON_TEXT if normalized == "ru" else TOGGLE_BUTTON_TEXT_EN
+    details_prefix = "Подробнее" if normalized == "ru" else "Details"
     builder = InlineKeyboardBuilder()
     for card in cards:
         status = "🟢" if card.runtime.is_active else "🔴"
         title = card.runtime.title or card.runtime.username or f"bot_{card.runtime.db_bot_id}"
         builder.row(
             InlineKeyboardButton(
-                text=f"{status} {title}",
+                text=f"{details_prefix}: {status} {title}",
                 callback_data=f"cabinet:view:{card.runtime.db_bot_id}",
             ),
             InlineKeyboardButton(
