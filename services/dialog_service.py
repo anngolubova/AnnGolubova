@@ -144,6 +144,33 @@ class DialogService:
                 )
                 session.add(message)
 
+    async def is_user_blocked(self, user_telegram_id: int) -> bool:
+        async with self._session_factory() as session:
+            statement = select(User.is_blocked).where(User.telegram_id == user_telegram_id).limit(1)
+            value = (await session.execute(statement)).scalar_one_or_none()
+            return bool(value) if value is not None else False
+
+    async def set_user_block_status_by_dialog_id(
+        self,
+        *,
+        dialog_id: int,
+        blocked: bool,
+    ) -> bool:
+        async with self._session_factory() as session:
+            async with session.begin():
+                stmt = (
+                    select(User)
+                    .join(Dialog, Dialog.user_id == User.id)
+                    .where(Dialog.id == dialog_id, Dialog.bot_id == self._bot_id)
+                    .limit(1)
+                )
+                user = (await session.execute(stmt)).scalar_one_or_none()
+                if user is None:
+                    return False
+                user.is_blocked = blocked
+                await session.flush()
+                return True
+
     async def resolve_dialog_by_id(self, *, dialog_id: int) -> DialogTarget | None:
         async with self._session_factory() as session:
             statement = (

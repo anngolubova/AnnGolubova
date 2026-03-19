@@ -168,6 +168,50 @@ def get_admin_router(services: ServiceContainer) -> Router:
             logger.exception("Failed /answer delivery for dialog_id=%s", dialog_id)
             await message.answer("Не удалось отправить сообщение пользователю.")
 
+    @router.message(Command("block"), is_admin_chat)
+    async def admin_block_command(message: Message) -> None:
+        await _change_block_state(message, block=True)
+
+    @router.message(Command("unblock"), is_admin_chat)
+    async def admin_unblock_command(message: Message) -> None:
+        await _change_block_state(message, block=False)
+
+    async def _change_block_state(message: Message, *, block: bool) -> None:
+        dialog_id: int | None = None
+        if message.reply_to_message is not None:
+            target = await dialog_service.resolve_dialog_by_admin_message(
+                admin_chat_id=services.runtime.admin_chat_id,
+                admin_message_id=message.reply_to_message.message_id,
+            )
+            if target is not None:
+                dialog_id = target.dialog_id
+        else:
+            parts = (message.text or "").split(maxsplit=1)
+            if len(parts) > 1:
+                try:
+                    dialog_id = int(parts[1].strip())
+                except ValueError:
+                    dialog_id = None
+
+        if dialog_id is None:
+            await message.answer(
+                "Формат:\n"
+                f"• /{'block' if block else 'unblock'} <dialog_id>\n"
+                "или отправьте команду реплаем на сообщение пользователя."
+            )
+            return
+
+        changed = await dialog_service.set_user_block_status_by_dialog_id(
+            dialog_id=dialog_id,
+            blocked=block,
+        )
+        if not changed:
+            await message.answer("Диалог не найден.")
+            return
+        await message.answer(
+            f"Пользователь диалога #{dialog_id} {'заблокирован' if block else 'разблокирован'}."
+        )
+
     @router.message(Command("broadcast"), is_admin_chat)
     async def admin_broadcast_command(message: Message, state: FSMContext) -> None:
         text = (message.text or "").strip()
@@ -266,6 +310,8 @@ def get_admin_router(services: ServiceContainer) -> Router:
             "Панель администратора:\n"
             "• Ответ пользователю: реплай на пересланное сообщение\n"
             "• Ответ без реплая: /answer <dialog_id> <текст>\n"
+            "• /block <dialog_id> — блокировка пользователя\n"
+            "• /unblock <dialog_id> — снять блокировку\n"
             "• /stats — статистика\n"
             "• /broadcast — рассылка\n"
             "• /bind — привязать группу\n"

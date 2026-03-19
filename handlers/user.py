@@ -25,9 +25,19 @@ def get_user_router(services: ServiceContainer) -> Router:
         # Prevent feedback loop when admin chat is a private chat.
         return message.chat.id != services.runtime.admin_chat_id
 
+    async def reject_if_blocked(message: Message) -> bool:
+        if message.from_user is None:
+            return True
+        if not await dialog_service.is_user_blocked(message.from_user.id):
+            return False
+        await message.answer("Ваш аккаунт заблокирован. Обратитесь к администратору.")
+        return True
+
     @router.message(F.chat.type == ChatType.PRIVATE, is_end_user_message, CommandStart())
     async def start_handler(message: Message) -> None:
         if message.from_user is None:
+            return
+        if await reject_if_blocked(message):
             return
         await dialog_service.get_or_create_dialog_context(message.from_user)
         await message.answer(services.runtime.welcome_text or USER_WELCOME_TEXT)
@@ -39,6 +49,8 @@ def get_user_router(services: ServiceContainer) -> Router:
     )
     async def user_message_handler(message: Message) -> None:
         if message.from_user is None:
+            return
+        if await reject_if_blocked(message):
             return
 
         dialog_context = await dialog_service.get_or_create_dialog_context(message.from_user)
@@ -85,6 +97,8 @@ def get_user_router(services: ServiceContainer) -> Router:
 
     @router.message(F.chat.type == ChatType.PRIVATE, is_end_user_message)
     async def unsupported_handler(message: Message) -> None:
+        if await reject_if_blocked(message):
+            return
         await message.answer(UNSUPPORTED_CONTENT_TEXT)
 
     return router
