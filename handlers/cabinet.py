@@ -168,11 +168,11 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
         },
         "service_broadcast_prompt": {
             "ru": (
-                "Отправьте текст глобальной рассылки для всех активных экземпляров.\n"
+                "Отправьте текст глобальной рассылки для всех экземпляров.\n"
                 "Для отмены используйте /cancel."
             ),
             "en": (
-                "Send text for global broadcast across all active instances.\n"
+                "Send text for global broadcast across all instances.\n"
                 "Use /cancel to abort."
             ),
         },

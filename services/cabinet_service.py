@@ -96,7 +96,7 @@ class CabinetService:
         if not payload:
             raise ValueError("Текст глобальной рассылки не должен быть пустым.")
 
-        runtimes = await self._registry.get_active_bots()
+        runtimes = await self._registry.get_all_bots()
         summary = ServiceBroadcastSummary(
             bots_total=len(runtimes),
             bots_sent=0,

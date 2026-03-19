@@ -107,6 +107,28 @@ class BotRegistryService:
                 for bot_row, owner_admin_telegram_id in rows
             ]
 
+    async def get_all_bots(self) -> list[BotRuntime]:
+        async with self._session_factory() as session:
+            stmt = (
+                select(BotModel, AdminAccount.telegram_id)
+                .outerjoin(AdminAccount, AdminAccount.id == BotModel.owner_admin_id)
+                .order_by(BotModel.id.asc())
+            )
+            rows = (await session.execute(stmt)).all()
+            return [
+                BotRuntime(
+                    db_bot_id=bot_row.id,
+                    token=bot_row.token,
+                    username=bot_row.username,
+                    title=bot_row.title,
+                    welcome_text=bot_row.welcome_text,
+                    admin_chat_id=bot_row.admin_chat_id,
+                    owner_admin_telegram_id=owner_admin_telegram_id,
+                    is_active=bool(bot_row.is_active),
+                )
+                for bot_row, owner_admin_telegram_id in rows
+            ]
+
     async def upsert_admin(
         self,
         *,
