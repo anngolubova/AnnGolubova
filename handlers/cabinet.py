@@ -273,7 +273,9 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
         return value.format(**kwargs) if kwargs else value
 
     def _in_aliases(message: Message, aliases: set[str]) -> bool:
-        return _normalized_text(message.text) in aliases
+        message_text = _normalized_text(message.text).casefold()
+        normalized_aliases = {_normalized_text(alias).casefold() for alias in aliases}
+        return message_text in normalized_aliases
 
     async def _admin_lang(user_id: int) -> str:
         try:
