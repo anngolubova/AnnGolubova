@@ -129,6 +129,45 @@ def get_admin_router(services: ServiceContainer) -> Router:
             f"• Сообщений за 24ч: {stats.messages_last_24h}"
         )
 
+    @router.message(Command("answer"), is_admin_chat)
+    async def admin_answer_command(message: Message) -> None:
+        text = (message.text or "").strip()
+        parts = text.split(maxsplit=2)
+        if len(parts) < 3:
+            await message.answer("Формат: /answer <dialog_id> <текст>")
+            return
+
+        try:
+            dialog_id = int(parts[1])
+        except ValueError:
+            await message.answer("dialog_id должен быть числом. Пример: /answer 15 Спасибо за сообщение!")
+            return
+
+        payload = parts[2].strip()
+        if not payload:
+            await message.answer("Текст ответа не должен быть пустым.")
+            return
+
+        target = await dialog_service.resolve_dialog_by_id(dialog_id=dialog_id)
+        if target is None:
+            await message.answer("Диалог не найден.")
+            return
+
+        try:
+            out_message = await message.bot.send_message(chat_id=target.user_telegram_id, text=payload)
+            await dialog_service.save_admin_to_user_message(
+                dialog_id=target.dialog_id,
+                content_type="text",
+                source_chat_id=message.chat.id,
+                source_message_id=message.message_id,
+                target_chat_id=target.user_telegram_id,
+                target_message_id=out_message.message_id,
+            )
+            await message.answer(f"Ответ отправлен в диалог #{dialog_id}.")
+        except (TelegramForbiddenError, TelegramBadRequest):
+            logger.exception("Failed /answer delivery for dialog_id=%s", dialog_id)
+            await message.answer("Не удалось отправить сообщение пользователю.")
+
     @router.message(Command("broadcast"), is_admin_chat)
     async def admin_broadcast_command(message: Message, state: FSMContext) -> None:
         text = (message.text or "").strip()
@@ -226,6 +265,7 @@ def get_admin_router(services: ServiceContainer) -> Router:
         await message.answer(
             "Панель администратора:\n"
             "• Ответ пользователю: реплай на пересланное сообщение\n"
+            "• Ответ без реплая: /answer <dialog_id> <текст>\n"
             "• /stats — статистика\n"
             "• /broadcast — рассылка\n"
             "• /bind — привязать группу\n"

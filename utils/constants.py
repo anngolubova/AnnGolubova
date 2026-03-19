@@ -23,6 +23,7 @@ UNSUPPORTED_CONTENT_TEXT = (
 ADMIN_START_TEXT = (
     "Панель администратора активна.\n"
     "• Отвечайте реплаем на пересланные сообщения пользователей.\n"
+    "• /answer <dialog_id> <текст> — ответ без реплая\n"
     "• /stats — статистика\n"
     "• /broadcast — режим рассылки"
 )
@@ -39,6 +40,8 @@ CONSTRUCTOR_WELCOME_TEMPLATE = (
     "/cabinet — открыть кабинет\n"
     "/mybots — мои боты\n"
     "/mystats — статистика\n"
+    "/bind — как привязать группу\n"
+    "/setwelcome — как настроить приветствие\n"
     "/cancel — отмена действия"
 )
 

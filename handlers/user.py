@@ -4,7 +4,7 @@ import logging
 
 from aiogram import F, Router
 from aiogram.enums import ChatType
-from aiogram.exceptions import TelegramBadRequest
+from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 from aiogram.filters import CommandStart
 from aiogram.types import Message
 
@@ -42,14 +42,29 @@ def get_user_router(services: ServiceContainer) -> Router:
             return
 
         dialog_context = await dialog_service.get_or_create_dialog_context(message.from_user)
-        set_thread_root = dialog_context.thread_root_admin_message_id is None
 
         try:
+            thread_root_message_id = dialog_context.thread_root_admin_message_id
+            if thread_root_message_id is None:
+                thread_root_notice = await message.bot.send_message(
+                    chat_id=services.runtime.admin_chat_id,
+                    text=(
+                        f"Новый диалог #{dialog_context.dialog_id}\n"
+                        "Отвечайте реплаем на сообщения клиента\n"
+                        "или командой: /answer <dialog_id> <текст>"
+                    ),
+                )
+                thread_root_message_id = thread_root_notice.message_id
+                await dialog_service.set_thread_root_message(
+                    dialog_id=dialog_context.dialog_id,
+                    admin_message_id=thread_root_message_id,
+                )
+
             admin_message_id = await routing_service.forward_user_message_to_admin(
                 bot=message.bot,
                 incoming_message=message,
                 admin_chat_id=services.runtime.admin_chat_id,
-                thread_root_admin_message_id=dialog_context.thread_root_admin_message_id,
+                thread_root_admin_message_id=thread_root_message_id,
             )
             await dialog_service.save_user_to_admin_message(
                 dialog_id=dialog_context.dialog_id,
@@ -58,9 +73,9 @@ def get_user_router(services: ServiceContainer) -> Router:
                 source_message_id=message.message_id,
                 target_chat_id=services.runtime.admin_chat_id,
                 target_message_id=admin_message_id,
-                set_thread_root=set_thread_root,
+                set_thread_root=False,
             )
-        except TelegramBadRequest:
+        except (TelegramBadRequest, TelegramForbiddenError):
             logger.exception("Failed to forward user message user_id=%s", message.from_user.id)
             await message.answer("Не удалось отправить сообщение. Попробуйте позже.")
             return

@@ -80,6 +80,14 @@ class DialogService:
                     if dialog is not None and dialog.thread_root_admin_message_id is None:
                         dialog.thread_root_admin_message_id = target_message_id
 
+    async def set_thread_root_message(self, *, dialog_id: int, admin_message_id: int) -> None:
+        async with self._session_factory() as session:
+            async with session.begin():
+                dialog = await session.get(Dialog, dialog_id)
+                if dialog is None:
+                    return
+                dialog.thread_root_admin_message_id = admin_message_id
+
     async def resolve_dialog_by_admin_message(
         self,
         *,
@@ -135,6 +143,19 @@ class DialogService:
                     target_message_id=target_message_id,
                 )
                 session.add(message)
+
+    async def resolve_dialog_by_id(self, *, dialog_id: int) -> DialogTarget | None:
+        async with self._session_factory() as session:
+            statement = (
+                select(Dialog.id, User.telegram_id)
+                .join(User, User.id == Dialog.user_id)
+                .where(Dialog.id == dialog_id, Dialog.bot_id == self._bot_id)
+                .limit(1)
+            )
+            row = (await session.execute(statement)).first()
+            if row is None:
+                return None
+            return DialogTarget(dialog_id=row[0], user_telegram_id=row[1])
 
     async def _get_or_create_user(self, session: AsyncSession, tg_user: TelegramUser) -> User:
         statement = select(User).where(User.telegram_id == tg_user.id).limit(1)
