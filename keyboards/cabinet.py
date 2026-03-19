@@ -11,6 +11,7 @@ BTN_ADD_BOT = "➕ Добавить бота"
 BTN_MY_BOTS = "🤖 Мои боты"
 BTN_MY_STATS = "📊 Моя статистика"
 BTN_EXPORT_DB = "📥 Выгрузка базы"
+BTN_HELP = "ℹ️ /help"
 BTN_CANCEL = "❌ Отмена"
 
 
@@ -19,6 +20,7 @@ def get_cabinet_keyboard() -> ReplyKeyboardMarkup:
         keyboard=[
             [KeyboardButton(text=BTN_ADD_BOT), KeyboardButton(text=BTN_MY_BOTS)],
             [KeyboardButton(text=BTN_MY_STATS), KeyboardButton(text=BTN_EXPORT_DB)],
+            [KeyboardButton(text=BTN_HELP)],
         ],
         resize_keyboard=True,
     )

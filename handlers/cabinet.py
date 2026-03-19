@@ -12,6 +12,7 @@ from keyboards.cabinet import (
     BTN_ADD_BOT,
     BTN_CANCEL,
     BTN_EXPORT_DB,
+    BTN_HELP,
     BTN_MY_BOTS,
     BTN_MY_STATS,
     get_bot_details_keyboard,
@@ -20,6 +21,7 @@ from keyboards.cabinet import (
     get_cancel_keyboard,
 )
 from services.cabinet_service import CabinetService
+from utils.constants import CONSTRUCTOR_HELP_TEXT, CONSTRUCTOR_WELCOME_TEMPLATE
 
 
 class AddBotState(StatesGroup):
@@ -33,6 +35,7 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
     my_bots_aliases = {BTN_MY_BOTS, "Мои боты"}
     my_stats_aliases = {BTN_MY_STATS, "Моя статистика"}
     export_aliases = {BTN_EXPORT_DB, "Выгрузка базы"}
+    help_aliases = {BTN_HELP, "/help", "help", "Помощь"}
 
     def _normalized_text(text: str | None) -> str:
         if not text:
@@ -59,8 +62,7 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
             return
         await cabinet_service.register_admin(message.from_user)
         await message.answer(
-            "Добро пожаловать в бот-конструктор.\n"
-            "Здесь можно подключать свои боты, смотреть статистику и выгружать базу.",
+            CONSTRUCTOR_WELCOME_TEMPLATE.format(telegram_id=message.from_user.id),
             reply_markup=get_cabinet_keyboard(),
         )
 
@@ -68,7 +70,19 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
     async def cabinet_open(message: Message) -> None:
         if message.from_user is not None:
             await cabinet_service.register_admin(message.from_user)
-        await message.answer("Личный кабинет открыт.", reply_markup=get_cabinet_keyboard())
+        await message.answer(
+            CONSTRUCTOR_WELCOME_TEMPLATE.format(
+                telegram_id=message.from_user.id if message.from_user else "000000"
+            ),
+            reply_markup=get_cabinet_keyboard(),
+        )
+
+    @router.message(F.chat.type == ChatType.PRIVATE, Command("help"))
+    @router.message(F.chat.type == ChatType.PRIVATE, lambda message: _in_aliases(message, help_aliases))
+    async def help_command(message: Message) -> None:
+        if message.from_user is not None:
+            await cabinet_service.register_admin(message.from_user)
+        await message.answer(CONSTRUCTOR_HELP_TEXT, reply_markup=get_cabinet_keyboard())
 
     @router.message(F.chat.type == ChatType.PRIVATE, Command("mybots"))
     async def my_bots_command(message: Message) -> None:
@@ -288,7 +302,7 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
         if await state.get_state() is not None:
             return
         await message.answer(
-            "Выберите действие через кнопки меню или используйте /cabinet.",
+            "Выберите действие через кнопки меню или используйте /help.",
             reply_markup=get_cabinet_keyboard(),
         )
 
