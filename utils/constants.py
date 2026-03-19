@@ -27,7 +27,7 @@ ADMIN_START_TEXT = (
     "• /block <dialog_id> — блокировка пользователя\n"
     "• /unblock <dialog_id> — снять блокировку\n"
     "• /stats — статистика\n"
-    "• /broadcast — режим рассылки"
+    "• /broadcast — рассылка (можно добавить кнопки)"
 )
 
 CONSTRUCTOR_WELCOME_TEMPLATE = (

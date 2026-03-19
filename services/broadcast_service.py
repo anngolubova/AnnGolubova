@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from aiogram import Bot
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
-from aiogram.types import Message
+from aiogram.types import InlineKeyboardMarkup, Message
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -32,6 +32,7 @@ class BroadcastService:
         bot: Bot,
         admin_chat_id: int,
         text: str,
+        reply_markup: InlineKeyboardMarkup | None = None,
     ) -> BroadcastResult:
         recipients = await self._get_dialog_recipients()
         sent = 0
@@ -40,7 +41,11 @@ class BroadcastService:
 
         for user_telegram_id, dialog_id in recipients.items():
             try:
-                out_message = await bot.send_message(chat_id=user_telegram_id, text=text)
+                out_message = await bot.send_message(
+                    chat_id=user_telegram_id,
+                    text=text,
+                    reply_markup=reply_markup,
+                )
                 sent += 1
                 records.append(
                     MessageRecord(
@@ -66,6 +71,7 @@ class BroadcastService:
         *,
         bot: Bot,
         source_message: Message,
+        reply_markup: InlineKeyboardMarkup | None = None,
     ) -> BroadcastResult:
         recipients = await self._get_dialog_recipients()
         sent = 0
@@ -78,6 +84,7 @@ class BroadcastService:
                     chat_id=user_telegram_id,
                     from_chat_id=source_message.chat.id,
                     message_id=source_message.message_id,
+                    reply_markup=reply_markup,
                 )
                 sent += 1
                 records.append(
