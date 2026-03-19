@@ -37,6 +37,10 @@ class AddBotState(StatesGroup):
     waiting_title = State()
 
 
+class ServiceBroadcastState(StatesGroup):
+    waiting_text = State()
+
+
 def get_cabinet_router(cabinet_service: CabinetService) -> Router:
     router = Router(name="constructor_cabinet_router")
 
@@ -157,6 +161,40 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
         "export_caption": {
             "ru": "Выгрузка базы пользователей готова.",
             "en": "User database export is ready.",
+        },
+        "service_broadcast_forbidden": {
+            "ru": "Команда доступна только владельцу сервиса.",
+            "en": "This command is available only for the service owner.",
+        },
+        "service_broadcast_prompt": {
+            "ru": (
+                "Отправьте текст глобальной рассылки для всех активных экземпляров.\n"
+                "Для отмены используйте /cancel."
+            ),
+            "en": (
+                "Send text for global broadcast across all active instances.\n"
+                "Use /cancel to abort."
+            ),
+        },
+        "service_broadcast_done": {
+            "ru": (
+                "Глобальная рассылка завершена.\n"
+                "• Экземпляров всего: {bots_total}\n"
+                "• Экземпляров успешно: {bots_sent}\n"
+                "• Экземпляров с ошибками: {bots_failed}\n"
+                "• Получателей всего: {users_total}\n"
+                "• Доставлено: {sent}\n"
+                "• Ошибок доставки: {failed}"
+            ),
+            "en": (
+                "Global broadcast completed.\n"
+                "• Instances total: {bots_total}\n"
+                "• Instances succeeded: {bots_sent}\n"
+                "• Instances failed: {bots_failed}\n"
+                "• Recipients total: {users_total}\n"
+                "• Delivered: {sent}\n"
+                "• Delivery failures: {failed}"
+            ),
         },
         "unknown": {
             "ru": "Выберите действие через кнопки меню или используйте /help.",
@@ -352,12 +390,92 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
             reply_markup=get_cabinet_keyboard(lang),
         )
 
+    @router.message(F.chat.type == ChatType.PRIVATE, Command("service_broadcast"))
+    async def service_broadcast_command(message: Message, state: FSMContext) -> None:
+        if message.from_user is None:
+            return
+        lang = await _ensure_admin_and_lang(message)
+        if not cabinet_service.is_service_owner(message.from_user.id):
+            await message.answer(
+                _t(lang, "service_broadcast_forbidden"),
+                reply_markup=get_cabinet_keyboard(lang),
+            )
+            return
+
+        payload = (message.text or "").split(maxsplit=1)
+        if len(payload) > 1 and payload[1].strip():
+            try:
+                summary = await cabinet_service.service_broadcast_text(
+                    owner_telegram_id=message.from_user.id,
+                    text=payload[1].strip(),
+                )
+            except ValueError as error:
+                await message.answer(str(error), reply_markup=get_cabinet_keyboard(lang))
+                return
+            await message.answer(
+                _t(
+                    lang,
+                    "service_broadcast_done",
+                    bots_total=summary.bots_total,
+                    bots_sent=summary.bots_sent,
+                    bots_failed=summary.bots_failed,
+                    users_total=summary.users_total,
+                    sent=summary.sent,
+                    failed=summary.failed,
+                ),
+                reply_markup=get_cabinet_keyboard(lang),
+            )
+            return
+
+        await state.set_state(ServiceBroadcastState.waiting_text)
+        await message.answer(_t(lang, "service_broadcast_prompt"), reply_markup=get_cancel_keyboard(lang))
+
     @router.message(F.chat.type == ChatType.PRIVATE, Command("cancel"))
     @router.message(F.chat.type == ChatType.PRIVATE, lambda message: _in_aliases(message, cancel_aliases))
     async def cancel_flow(message: Message, state: FSMContext) -> None:
         lang = await _ensure_admin_and_lang(message)
         await state.clear()
         await message.answer(_t(lang, "cancelled"), reply_markup=get_cabinet_keyboard(lang))
+
+    @router.message(F.chat.type == ChatType.PRIVATE, ServiceBroadcastState.waiting_text, F.text)
+    async def service_broadcast_text_step(message: Message, state: FSMContext) -> None:
+        if message.from_user is None:
+            return
+        if (message.text or "").startswith("/"):
+            return
+
+        lang = await _ensure_admin_and_lang(message)
+        if not cabinet_service.is_service_owner(message.from_user.id):
+            await state.clear()
+            await message.answer(
+                _t(lang, "service_broadcast_forbidden"),
+                reply_markup=get_cabinet_keyboard(lang),
+            )
+            return
+
+        try:
+            summary = await cabinet_service.service_broadcast_text(
+                owner_telegram_id=message.from_user.id,
+                text=message.text or "",
+            )
+        except ValueError as error:
+            await message.answer(str(error), reply_markup=get_cancel_keyboard(lang))
+            return
+
+        await state.clear()
+        await message.answer(
+            _t(
+                lang,
+                "service_broadcast_done",
+                bots_total=summary.bots_total,
+                bots_sent=summary.bots_sent,
+                bots_failed=summary.bots_failed,
+                users_total=summary.users_total,
+                sent=summary.sent,
+                failed=summary.failed,
+            ),
+            reply_markup=get_cabinet_keyboard(lang),
+        )
 
     @router.message(F.chat.type == ChatType.PRIVATE, lambda message: _in_aliases(message, add_bot_aliases))
     async def add_bot_clicked(message: Message, state: FSMContext) -> None:

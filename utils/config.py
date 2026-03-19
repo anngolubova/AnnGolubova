@@ -25,6 +25,7 @@ class Settings:
     constructor_bot_token: str | None
     admin_chat_id: int | None
     bot_admin_chat_ids: list[int]
+    service_owner_telegram_ids: list[int]
     database_url: str
     redis_url: str
     log_level: str
@@ -43,12 +44,17 @@ class Settings:
 
         admin_chat_id_raw = os.getenv("ADMIN_CHAT_ID")
         admin_chat_id = int(admin_chat_id_raw) if admin_chat_id_raw else None
+        service_owner_telegram_ids = _parse_int_csv(os.getenv("SERVICE_OWNER_TELEGRAM_IDS"))
+        if not service_owner_telegram_ids and admin_chat_id is not None and admin_chat_id > 0:
+            # Backward-compatible fallback for single-owner setups.
+            service_owner_telegram_ids = [admin_chat_id]
 
         return cls(
             bot_tokens=bot_tokens,
             constructor_bot_token=constructor_bot_token.strip() if constructor_bot_token else None,
             admin_chat_id=admin_chat_id,
             bot_admin_chat_ids=_parse_int_csv(os.getenv("BOT_ADMIN_CHAT_IDS")),
+            service_owner_telegram_ids=service_owner_telegram_ids,
             database_url=os.getenv(
                 "DATABASE_URL",
                 "sqlite+aiosqlite:///./data/feedback_bot.db",

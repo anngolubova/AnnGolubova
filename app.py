@@ -52,6 +52,7 @@ async def run_constructor_bot(
     constructor_bot_token: str,
     redis_url: str,
     session_factory,
+    service_owner_telegram_ids: set[int],
 ) -> None:
     bot = Bot(
         token=constructor_bot_token,
@@ -60,6 +61,7 @@ async def run_constructor_bot(
     dispatcher = await create_constructor_dispatcher_async(
         session_factory=session_factory,
         redis_url=redis_url,
+        service_owner_telegram_ids=service_owner_telegram_ids,
     )
 
     me = await bot.get_me()
@@ -72,6 +74,7 @@ async def run_constructor_bot(
             BotCommand(command="cabinet", description="Открыть кабинет"),
             BotCommand(command="mybots", description="Мои боты"),
             BotCommand(command="mystats", description="Моя статистика"),
+            BotCommand(command="service_broadcast", description="Глобальная рассылка (owner)"),
             BotCommand(command="cancel", description="Отмена действия"),
         ]
     )
@@ -140,6 +143,7 @@ async def main() -> None:
                     constructor_bot_token=settings.constructor_bot_token,
                     redis_url=settings.redis_url,
                     session_factory=session_factory,
+                    service_owner_telegram_ids=set(settings.service_owner_telegram_ids),
                 ),
                 name="constructor-bot",
             )

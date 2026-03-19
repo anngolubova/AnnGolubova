@@ -62,12 +62,17 @@ async def create_constructor_dispatcher_async(
     *,
     session_factory: async_sessionmaker[AsyncSession],
     redis_url: str,
+    service_owner_telegram_ids: set[int] | None = None,
 ) -> Dispatcher:
     storage = await create_fsm_storage(redis_url)
     dispatcher = Dispatcher(storage=storage)
 
     registry = BotRegistryService(session_factory)
-    cabinet_service = CabinetService(session_factory, registry)
+    cabinet_service = CabinetService(
+        session_factory,
+        registry,
+        service_owner_telegram_ids=service_owner_telegram_ids or set(),
+    )
     dispatcher.include_router(get_cabinet_router(cabinet_service))
     setup_error_handlers(dispatcher)
 
