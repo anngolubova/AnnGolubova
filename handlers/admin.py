@@ -86,7 +86,7 @@ def get_admin_router(services: ServiceContainer) -> Router:
         return False
 
     def _parse_button_line(item: str) -> tuple[str, str]:
-        for separator in (" - ", " — "):
+        for separator in (" - ", " — ", "-", "—"):
             if separator in item:
                 title, url = item.split(separator, maxsplit=1)
                 break
@@ -109,6 +109,7 @@ def get_admin_router(services: ServiceContainer) -> Router:
 
     def _parse_inline_keyboard(raw: str) -> InlineKeyboardMarkup:
         rows: list[list[InlineKeyboardButton]] = []
+        total_buttons = 0
         lines = [line.strip() for line in raw.splitlines() if line.strip()]
         if not lines:
             raise ValueError(
@@ -122,13 +123,20 @@ def get_admin_router(services: ServiceContainer) -> Router:
             parts = [part.strip() for part in line.split("|") if part.strip()]
             if not parts:
                 continue
+            if len(parts) > 8:
+                raise ValueError("В одной строке можно указать не более 8 кнопок.")
             for part in parts:
                 title, url = _parse_button_line(part)
+                if len(title) > 64:
+                    raise ValueError("Текст кнопки слишком длинный (максимум 64 символа).")
                 row.append(InlineKeyboardButton(text=title, url=url))
+                total_buttons += 1
             rows.append(row)
 
         if not rows:
             raise ValueError("Не найдено валидных кнопок. Отправьте /skip для рассылки без кнопок.")
+        if total_buttons > 100:
+            raise ValueError("Слишком много кнопок. Максимум 100 кнопок в одной клавиатуре.")
         return InlineKeyboardMarkup(inline_keyboard=rows)
 
     @router.message(Command("start"), is_admin_chat)
@@ -189,12 +197,20 @@ def get_admin_router(services: ServiceContainer) -> Router:
 
     @router.message(is_admin_chat, WelcomeState.waiting_text, F.text)
     async def set_welcome_text_step(message: Message, state: FSMContext) -> None:
+        normalized_text = (message.text or "").strip()
+        if normalized_text.lower() == "/cancel":
+            await state.clear()
+            await message.answer("Изменение приветствия отменено.")
+            return
+        if normalized_text.startswith("/"):
+            await message.answer("Для отмены используйте /cancel. Отправьте обычный текст приветствия.")
+            return
         try:
             welcome_text = await registry_service.set_welcome_text_for_runtime(
                 db_bot_id=services.runtime.db_bot_id,
                 actor_telegram_id=message.from_user.id if message.from_user else None,
                 owner_admin_telegram_id=services.runtime.owner_admin_telegram_id,
-                welcome_text=(message.text or "").strip(),
+                welcome_text=normalized_text,
             )
         except ValueError as error:
             await message.answer(str(error))

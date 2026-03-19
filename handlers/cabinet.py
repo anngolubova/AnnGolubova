@@ -240,6 +240,10 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
             "ru": "Сессия изменения приветствия устарела. Повторите через /mybots.",
             "en": "Welcome edit session expired. Repeat via /mybots.",
         },
+        "state_use_cancel": {
+            "ru": "Для выхода из текущего режима используйте /cancel.",
+            "en": "Use /cancel to exit current mode.",
+        },
         "unknown": {
             "ru": "Выберите действие через кнопки меню или используйте /help.",
             "en": "Choose an action via menu buttons or use /help.",
@@ -540,10 +544,12 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
     async def service_broadcast_text_step(message: Message, state: FSMContext) -> None:
         if message.from_user is None:
             return
-        if (message.text or "").startswith("/"):
-            return
 
         lang = await _ensure_admin_and_lang(message)
+        if (message.text or "").startswith("/"):
+            if (message.text or "").strip().lower() != "/cancel":
+                await message.answer(_t(lang, "state_use_cancel"), reply_markup=get_cancel_keyboard(lang))
+            return
         if not cabinet_service.is_service_owner(message.from_user.id):
             await state.clear()
             await message.answer(
@@ -752,10 +758,12 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
     async def set_welcome_text_step(message: Message, state: FSMContext) -> None:
         if message.from_user is None:
             return
-        if (message.text or "").startswith("/"):
-            return
 
         lang = await _ensure_admin_and_lang(message)
+        if (message.text or "").startswith("/"):
+            if (message.text or "").strip().lower() != "/cancel":
+                await message.answer(_t(lang, "state_use_cancel"), reply_markup=get_cancel_keyboard(lang))
+            return
         data = await state.get_data()
         try:
             db_bot_id = int(data.get("setwelcome_bot_id"))
