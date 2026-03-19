@@ -47,7 +47,7 @@ CONSTRUCTOR_HELP_TEXT = (
     "Шаг 1 — Создайте бота\n"
     "Откройте @BotFather, отправьте /newbot, выберите имя и username.\n\n"
     "Шаг 2. Скопируйте токен\n"
-    "BotFather выдаст вам токен вида:\n"
+    "@BotFather выдаст вам токен вида:\n"
     "123456789:ABCdefGHI-jklMNOpqrsTUVwxyz_12345.\n\n"
     "Шаг 3. Отправьте токен сюда\n"
     "Вставьте токен в этот чат.\n"
