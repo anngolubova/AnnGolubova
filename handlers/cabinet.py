@@ -41,6 +41,10 @@ class ServiceBroadcastState(StatesGroup):
     waiting_text = State()
 
 
+class BotWelcomeState(StatesGroup):
+    waiting_text = State()
+
+
 def get_cabinet_router(cabinet_service: CabinetService) -> Router:
     router = Router(name="constructor_cabinet_router")
 
@@ -64,14 +68,18 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
         },
         "setwelcome_hint": {
             "ru": (
-                "Команда /setwelcome выполняется в админ-чате подключенного бота.\n\n"
-                "Пример:\n"
-                "/setwelcome Добро пожаловать! Опишите ваш вопрос, и мы скоро ответим."
+                "Изменение приветствия доступно в кабинете.\n\n"
+                "Варианты:\n"
+                "1) /mybots → Подробнее → ✏️ Приветствие\n"
+                "2) /setwelcome <bot_id> <текст>\n"
+                "3) /setwelcome <bot_id> - (сброс к стандартному)"
             ),
             "en": (
-                "The /setwelcome command must be used in connected bot admin chat.\n\n"
-                "Example:\n"
-                "/setwelcome Welcome! Describe your request and we will reply soon."
+                "Welcome text update is available in cabinet.\n\n"
+                "Options:\n"
+                "1) /mybots → Details → ✏️ Welcome text\n"
+                "2) /setwelcome <bot_id> <text>\n"
+                "3) /setwelcome <bot_id> - (reset to default)"
             ),
         },
         "mybots_empty": {
@@ -196,6 +204,42 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
                 "• Delivery failures: {failed}"
             ),
         },
+        "setwelcome_no_bots": {
+            "ru": "У вас нет подключённых ботов. Сначала добавьте бота.",
+            "en": "You do not have connected bots yet. Add a bot first.",
+        },
+        "setwelcome_format": {
+            "ru": "Формат: /setwelcome <bot_id> <текст> (или '-' для сброса)",
+            "en": "Format: /setwelcome <bot_id> <text> (or '-' to reset)",
+        },
+        "setwelcome_select_prompt": {
+            "ru": "Выберите бота в списке и нажмите «✏️ Приветствие».",
+            "en": "Select a bot in the list and tap “✏️ Welcome text”.",
+        },
+        "setwelcome_enter_text": {
+            "ru": (
+                "Отправьте новый текст приветствия для этого бота.\n"
+                "Отправьте '-' чтобы вернуть стандартное приветствие.\n"
+                "Для отмены используйте /cancel."
+            ),
+            "en": (
+                "Send new welcome text for this bot.\n"
+                "Send '-' to restore default welcome text.\n"
+                "Use /cancel to abort."
+            ),
+        },
+        "setwelcome_updated": {
+            "ru": "Приветствие обновлено.",
+            "en": "Welcome text was updated.",
+        },
+        "setwelcome_reset": {
+            "ru": "Приветствие сброшено на стандартное.",
+            "en": "Welcome text was reset to default.",
+        },
+        "setwelcome_state_lost": {
+            "ru": "Сессия изменения приветствия устарела. Повторите через /mybots.",
+            "en": "Welcome edit session expired. Repeat via /mybots.",
+        },
         "unknown": {
             "ru": "Выберите действие через кнопки меню или используйте /help.",
             "en": "Choose an action via menu buttons or use /help.",
@@ -305,6 +349,35 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
             if "message is not modified" not in str(error).lower():
                 raise
 
+    async def _apply_welcome_text(
+        *,
+        message: Message,
+        lang: str,
+        db_bot_id: int,
+        raw_text: str,
+    ) -> bool:
+        normalized = raw_text.strip()
+        if not normalized:
+            await message.answer(_t(lang, "setwelcome_format"), reply_markup=get_cancel_keyboard(lang))
+            return False
+        if message.from_user is None:
+            return False
+
+        new_welcome = None if normalized == "-" else normalized
+        try:
+            stored = await cabinet_service.set_bot_welcome_text(
+                admin_telegram_id=message.from_user.id,
+                db_bot_id=db_bot_id,
+                welcome_text=new_welcome,
+            )
+        except ValueError as error:
+            await message.answer(str(error), reply_markup=get_cabinet_keyboard(lang))
+            return False
+
+        text = _t(lang, "setwelcome_reset") if stored is None else _t(lang, "setwelcome_updated")
+        await message.answer(text, reply_markup=get_cabinet_keyboard(lang))
+        return True
+
     @router.message(F.chat.type == ChatType.PRIVATE, Command("start"))
     async def cabinet_start(message: Message) -> None:
         if message.from_user is None:
@@ -364,8 +437,32 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
 
     @router.message(F.chat.type == ChatType.PRIVATE, Command("setwelcome"))
     async def setwelcome_hint_in_constructor(message: Message) -> None:
+        if message.from_user is None:
+            return
         lang = await _ensure_admin_and_lang(message)
-        await message.answer(_t(lang, "setwelcome_hint"), reply_markup=get_cabinet_keyboard(lang))
+        payload = (message.text or "").split(maxsplit=2)
+        if len(payload) >= 3:
+            try:
+                db_bot_id = int(payload[1])
+            except ValueError:
+                await message.answer(_t(lang, "setwelcome_format"), reply_markup=get_cabinet_keyboard(lang))
+                return
+            await _apply_welcome_text(
+                message=message,
+                lang=lang,
+                db_bot_id=db_bot_id,
+                raw_text=payload[2],
+            )
+            return
+
+        cards = await cabinet_service.list_admin_bots_with_stats(message.from_user.id)
+        if not cards:
+            await message.answer(_t(lang, "setwelcome_no_bots"), reply_markup=get_cabinet_keyboard(lang))
+            return
+        await message.answer(
+            f"{_t(lang, 'setwelcome_hint')}\n\n{_t(lang, 'setwelcome_select_prompt')}",
+            reply_markup=get_bots_inline_keyboard(cards, lang),
+        )
 
     @router.message(F.chat.type == ChatType.PRIVATE, Command("mybots"))
     async def my_bots_command(message: Message) -> None:
@@ -593,6 +690,32 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
         )
         await callback.answer()
 
+    @router.callback_query(F.data.startswith("cabinet:setwelcome:"))
+    async def callback_set_welcome(callback: CallbackQuery, state: FSMContext) -> None:
+        if callback.from_user is None:
+            return
+        lang = await _admin_lang(callback.from_user.id)
+        try:
+            db_bot_id = int(callback.data.split(":")[-1])
+        except (TypeError, ValueError):
+            await callback.answer(_t(lang, "bad_callback"), show_alert=True)
+            return
+
+        cards = await cabinet_service.list_admin_bots_with_stats(callback.from_user.id)
+        card = next((item for item in cards if item.runtime.db_bot_id == db_bot_id), None)
+        if card is None:
+            await callback.answer(_t(lang, "bot_not_found"), show_alert=True)
+            return
+
+        await state.set_state(BotWelcomeState.waiting_text)
+        await state.update_data(setwelcome_bot_id=db_bot_id)
+        if callback.message is not None:
+            await callback.message.answer(
+                _t(lang, "setwelcome_enter_text"),
+                reply_markup=get_cancel_keyboard(lang),
+            )
+        await callback.answer(_t(lang, "done"))
+
     @router.callback_query(F.data.startswith("cabinet:toggle:"))
     async def callback_toggle_bot(callback: CallbackQuery) -> None:
         if callback.from_user is None:
@@ -622,6 +745,36 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
             text=_t(lang, "mybots_title"),
             reply_markup=get_bots_inline_keyboard(cards, lang) if cards else None,
         )
+
+    @router.message(F.chat.type == ChatType.PRIVATE, BotWelcomeState.waiting_text, F.text)
+    async def set_welcome_text_step(message: Message, state: FSMContext) -> None:
+        if message.from_user is None:
+            return
+        if (message.text or "").startswith("/"):
+            return
+
+        lang = await _ensure_admin_and_lang(message)
+        data = await state.get_data()
+        try:
+            db_bot_id = int(data.get("setwelcome_bot_id"))
+        except (TypeError, ValueError):
+            await state.clear()
+            await message.answer(_t(lang, "setwelcome_state_lost"), reply_markup=get_cabinet_keyboard(lang))
+            return
+
+        is_done = await _apply_welcome_text(
+            message=message,
+            lang=lang,
+            db_bot_id=db_bot_id,
+            raw_text=message.text or "",
+        )
+        if is_done:
+            await state.clear()
+
+    @router.message(F.chat.type == ChatType.PRIVATE, BotWelcomeState.waiting_text)
+    async def set_welcome_non_text(message: Message) -> None:
+        lang = await _ensure_admin_and_lang(message)
+        await message.answer(_t(lang, "setwelcome_enter_text"), reply_markup=get_cancel_keyboard(lang))
 
     @router.message(F.chat.type == ChatType.PRIVATE, lambda message: _in_aliases(message, my_stats_aliases))
     async def show_dashboard(message: Message) -> None:

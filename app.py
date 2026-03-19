@@ -74,6 +74,7 @@ async def run_constructor_bot(
             BotCommand(command="cabinet", description="Открыть кабинет"),
             BotCommand(command="mybots", description="Мои боты"),
             BotCommand(command="mystats", description="Моя статистика"),
+            BotCommand(command="setwelcome", description="Изменить приветствие бота"),
             BotCommand(command="service_broadcast", description="Глобальная рассылка (owner)"),
             BotCommand(command="cancel", description="Отмена действия"),
         ]

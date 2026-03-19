@@ -6,7 +6,7 @@ from aiogram.types import User as TelegramUser
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from database.models import Dialog, MessageDirection, MessageRecord, User
+from database.models import BotModel, Dialog, MessageDirection, MessageRecord, User
 
 
 @dataclass(slots=True)
@@ -183,6 +183,12 @@ class DialogService:
             if row is None:
                 return None
             return DialogTarget(dialog_id=row[0], user_telegram_id=row[1])
+
+    async def get_bot_welcome_text(self) -> str | None:
+        async with self._session_factory() as session:
+            statement = select(BotModel.welcome_text).where(BotModel.id == self._bot_id).limit(1)
+            value = (await session.execute(statement)).scalar_one_or_none()
+            return value.strip() if isinstance(value, str) and value.strip() else None
 
     async def _get_or_create_user(self, session: AsyncSession, tg_user: TelegramUser) -> User:
         statement = select(User).where(User.telegram_id == tg_user.id).limit(1)

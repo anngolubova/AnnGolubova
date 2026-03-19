@@ -151,6 +151,30 @@ class CabinetService:
             db_bot_id=db_bot_id,
         )
 
+    async def set_bot_welcome_text(
+        self,
+        *,
+        admin_telegram_id: int,
+        db_bot_id: int,
+        welcome_text: str | None,
+    ) -> str | None:
+        async with self._session_factory() as session:
+            async with session.begin():
+                stmt = (
+                    select(BotModel)
+                    .join(AdminAccount, AdminAccount.id == BotModel.owner_admin_id)
+                    .where(AdminAccount.telegram_id == admin_telegram_id, BotModel.id == db_bot_id)
+                    .limit(1)
+                )
+                bot_row = (await session.execute(stmt)).scalar_one_or_none()
+                if bot_row is None:
+                    raise ValueError("Бот не найден или не принадлежит этому администратору.")
+
+                normalized = (welcome_text or "").strip()
+                bot_row.welcome_text = normalized or None
+                await session.flush()
+                return bot_row.welcome_text
+
     async def get_dashboard(self, admin_telegram_id: int) -> AdminDashboard:
         async with self._session_factory() as session:
             base_query = (

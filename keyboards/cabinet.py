@@ -27,6 +27,8 @@ TOGGLE_STATUS_TEXT = "🔄 Переключить статус"
 TOGGLE_STATUS_TEXT_EN = "🔄 Toggle status"
 BACK_LIST_TEXT = "↩️ Назад к списку"
 BACK_LIST_TEXT_EN = "↩️ Back to list"
+WELCOME_BUTTON_TEXT = "✏️ Приветствие"
+WELCOME_BUTTON_TEXT_EN = "✏️ Welcome text"
 
 def _normalize_lang(lang: str | None) -> str:
     if not lang:
@@ -84,8 +86,15 @@ def get_bot_details_keyboard(db_bot_id: int, lang: str = "ru") -> InlineKeyboard
     normalized = _normalize_lang(lang)
     toggle_status = TOGGLE_STATUS_TEXT if normalized == "ru" else TOGGLE_STATUS_TEXT_EN
     back_list = BACK_LIST_TEXT if normalized == "ru" else BACK_LIST_TEXT_EN
+    welcome_text = WELCOME_BUTTON_TEXT if normalized == "ru" else WELCOME_BUTTON_TEXT_EN
     return InlineKeyboardMarkup(
         inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=welcome_text,
+                    callback_data=f"cabinet:setwelcome:{db_bot_id}",
+                ),
+            ],
             [
                 InlineKeyboardButton(
                     text=toggle_status,
