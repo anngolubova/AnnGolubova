@@ -1,0 +1,19 @@
+# Default owner for all files
+* @anngolubova
+
+# Python backend
+/app.py @anngolubova
+/bot/ @anngolubova
+/database/ @anngolubova
+/handlers/ @anngolubova
+/keyboards/ @anngolubova
+/services/ @anngolubova
+/utils/ @anngolubova
+
+# DevOps and docs
+/.github/ @anngolubova
+/Dockerfile @anngolubova
+/docker-compose.yml @anngolubova
+/README.md @anngolubova
+/CONTRIBUTING.md @anngolubova
+/docs/ @anngolubova

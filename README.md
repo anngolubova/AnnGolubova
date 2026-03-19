@@ -76,7 +76,10 @@ docker compose up --build -d
 
 Репозиторий уже подготовлен для переноса:
 - безопасный `.gitignore` (env, базы, кэш, IDE, node artifacts);
-- шаблоны для PR и CI;
+- шаблоны для PR и Issues (bug/feature), плюс issue config;
+- `CODEOWNERS` для авто-назначения ревьюеров;
+- GitHub Actions CI workflow;
+- release checklist: `docs/RELEASE_CHECKLIST.md`;
 - `LICENSE` и `CONTRIBUTING.md`.
 
 Рекомендуемый порядок переноса:
