@@ -114,6 +114,7 @@ class BotRegistryService:
         username: str | None,
         first_name: str | None,
         last_name: str | None,
+        telegram_language_code: str | None = None,
     ) -> AdminAccount:
         # Handle concurrent /start or button presses safely:
         # if another transaction inserts the same admin between SELECT and INSERT,
@@ -127,11 +128,13 @@ class BotRegistryService:
                         ).limit(1)
                         admin = (await session.execute(stmt)).scalar_one_or_none()
                         if admin is None:
+                            normalized_lang = self._normalize_ui_language(telegram_language_code)
                             admin = AdminAccount(
                                 telegram_id=telegram_id,
                                 username=username,
                                 first_name=first_name,
                                 last_name=last_name,
+                                ui_language=normalized_lang,
                                 is_active=True,
                             )
                             session.add(admin)
@@ -141,6 +144,8 @@ class BotRegistryService:
                         admin.username = username
                         admin.first_name = first_name
                         admin.last_name = last_name
+                        if not admin.ui_language:
+                            admin.ui_language = self._normalize_ui_language(telegram_language_code)
                         admin.is_active = True
                         await session.flush()
                         return admin
@@ -177,6 +182,23 @@ class BotRegistryService:
                 )
                 for row in rows
             ]
+
+    async def get_admin_ui_language(self, telegram_id: int) -> str:
+        async with self._session_factory() as session:
+            stmt = select(AdminAccount.ui_language).where(AdminAccount.telegram_id == telegram_id).limit(1)
+            value = (await session.execute(stmt)).scalar_one_or_none()
+            return self._normalize_ui_language(value)
+
+    async def set_admin_ui_language(self, telegram_id: int, language: str) -> str:
+        async with self._session_factory() as session:
+            async with session.begin():
+                stmt = select(AdminAccount).where(AdminAccount.telegram_id == telegram_id).limit(1)
+                admin = (await session.execute(stmt)).scalar_one_or_none()
+                if admin is None:
+                    raise ValueError("Профиль администратора не найден. Отправьте /start.")
+                admin.ui_language = self._normalize_ui_language(language)
+                await session.flush()
+                return admin.ui_language
 
     async def add_bot_for_admin(
         self,
@@ -358,6 +380,16 @@ class BotRegistryService:
         if current_admin_chat_id > 0 and actor_telegram_id == current_admin_chat_id:
             return
         raise ValueError("Команда недоступна для этого пользователя.")
+
+    def _normalize_ui_language(self, value: str | None) -> str:
+        if not value:
+            return "ru"
+        candidate = value.strip().lower()
+        if candidate.startswith("ru"):
+            return "ru"
+        if candidate.startswith("en"):
+            return "en"
+        return "ru"
 
     async def _resolve_bot_identity(self, token: str) -> tuple[int, str | None]:
         temp_bot = Bot(token=token)

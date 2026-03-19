@@ -12,6 +12,8 @@ BTN_MY_BOTS = "🤖 Мои боты"
 BTN_MY_STATS = "📊 Моя статистика"
 BTN_EXPORT_DB = "📥 Выгрузка базы"
 BTN_HELP = "ℹ️ /help"
+BTN_FEEDBACK = "💬 /feedback"
+BTN_LANG = "🌐 /lang"
 BTN_CANCEL = "❌ Отмена"
 
 
@@ -20,7 +22,8 @@ def get_cabinet_keyboard() -> ReplyKeyboardMarkup:
         keyboard=[
             [KeyboardButton(text=BTN_ADD_BOT), KeyboardButton(text=BTN_MY_BOTS)],
             [KeyboardButton(text=BTN_MY_STATS), KeyboardButton(text=BTN_EXPORT_DB)],
-            [KeyboardButton(text=BTN_HELP)],
+            [KeyboardButton(text=BTN_HELP), KeyboardButton(text=BTN_FEEDBACK)],
+            [KeyboardButton(text=BTN_LANG)],
         ],
         resize_keyboard=True,
     )
@@ -63,6 +66,17 @@ def get_bot_details_keyboard(db_bot_id: int) -> InlineKeyboardMarkup:
                     text="↩️ Назад к списку",
                     callback_data="cabinet:list",
                 ),
+            ]
+        ]
+    )
+
+
+def get_language_inline_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="Русский", callback_data="cabinet:lang:ru"),
+                InlineKeyboardButton(text="English", callback_data="cabinet:lang:en"),
             ]
         ]
     )

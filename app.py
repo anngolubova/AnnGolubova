@@ -7,6 +7,7 @@ import logging
 from aiogram import Bot
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+from aiogram.types import BotCommand
 
 from bot.factory import create_constructor_dispatcher_async, create_dispatcher_async
 from bot.runtime import BotRuntime, ServiceContainer
@@ -62,6 +63,18 @@ async def run_constructor_bot(
     )
 
     me = await bot.get_me()
+    await bot.set_my_commands(
+        [
+            BotCommand(command="start", description="Открыть стартовое меню"),
+            BotCommand(command="help", description="Инструкция по подключению"),
+            BotCommand(command="feedback", description="Связаться с нами"),
+            BotCommand(command="lang", description="Изменить язык"),
+            BotCommand(command="cabinet", description="Открыть кабинет"),
+            BotCommand(command="mybots", description="Мои боты"),
+            BotCommand(command="mystats", description="Моя статистика"),
+            BotCommand(command="cancel", description="Отмена действия"),
+        ]
+    )
     logger.info("Starting constructor bot @%s id=%s", me.username, me.id)
     try:
         await dispatcher.start_polling(

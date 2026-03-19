@@ -13,15 +13,18 @@ from keyboards.cabinet import (
     BTN_CANCEL,
     BTN_EXPORT_DB,
     BTN_HELP,
+    BTN_FEEDBACK,
+    BTN_LANG,
     BTN_MY_BOTS,
     BTN_MY_STATS,
     get_bot_details_keyboard,
     get_bots_inline_keyboard,
     get_cabinet_keyboard,
     get_cancel_keyboard,
+    get_language_inline_keyboard,
 )
 from services.cabinet_service import CabinetService
-from utils.constants import CONSTRUCTOR_HELP_TEXT, CONSTRUCTOR_WELCOME_TEMPLATE
+from utils.constants import CONSTRUCTOR_FEEDBACK_TEXT, CONSTRUCTOR_HELP_TEXT, CONSTRUCTOR_WELCOME_TEMPLATE
 
 
 class AddBotState(StatesGroup):
@@ -36,6 +39,8 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
     my_stats_aliases = {BTN_MY_STATS, "Моя статистика"}
     export_aliases = {BTN_EXPORT_DB, "Выгрузка базы"}
     help_aliases = {BTN_HELP, "/help", "help", "Помощь"}
+    feedback_aliases = {BTN_FEEDBACK, "/feedback", "feedback", "Связаться с нами"}
+    lang_aliases = {BTN_LANG, "/lang", "lang", "Язык"}
 
     def _normalized_text(text: str | None) -> str:
         if not text:
@@ -45,6 +50,70 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
 
     def _in_aliases(message: Message, aliases: set[str]) -> bool:
         return _normalized_text(message.text) in aliases
+
+    def _normalize_lang(value: str | None) -> str:
+        if not value:
+            return "ru"
+        candidate = value.strip().lower()
+        if candidate.startswith("en"):
+            return "en"
+        return "ru"
+
+    async def _admin_lang(user_id: int) -> str:
+        return _normalize_lang(await cabinet_service.get_admin_language(user_id))
+
+    def _welcome_text(lang: str, telegram_id: int) -> str:
+        if lang == "en":
+            return (
+                "Feedback Bot Platform\n\n"
+                f"Your Telegram ID: {telegram_id}\n\n"
+                "How to connect a bot:\n"
+                "1. Create a bot via @BotFather\n"
+                "2. Copy API token\n"
+                "3. Send token to this chat\n\n"
+                "Commands:\n"
+                "/help — full guide\n"
+                "/cabinet — open cabinet\n"
+                "/mybots — my bots\n"
+                "/mystats — stats\n"
+                "/feedback — contact us\n"
+                "/lang — change language\n"
+                "/bind — bind admin group\n"
+                "/setwelcome — set client welcome\n"
+                "/cancel — cancel action"
+            )
+        return CONSTRUCTOR_WELCOME_TEMPLATE.format(telegram_id=telegram_id)
+
+    def _help_text(lang: str) -> str:
+        if lang == "en":
+            return (
+                "How to create and connect a feedback bot\n\n"
+                "Step 1 — Create a bot\n"
+                "Open @BotFather, send /newbot, choose name and username.\n\n"
+                "Step 2 — Copy token\n"
+                "@BotFather will return token like:\n"
+                "123456789:ABCdefGHI-jklMNOpqrsTUVwxyz_12345.\n\n"
+                "Step 3 — Send token here\n"
+                "Paste the token in this chat.\n"
+                "System will validate and auto-start your bot.\n\n"
+                "Step 4 — Create admin group\n"
+                "Create Telegram group for support team.\n"
+                "Add your bot to the group.\n"
+                "Then send /bind in the group.\n\n"
+                "Step 5 — Set welcome text\n"
+                "Use /setwelcome to configure text clients see on first contact.\n\n"
+                "Done! Clients write to your bot, messages appear in group.\n"
+                "Reply there and client gets your response."
+            )
+        return CONSTRUCTOR_HELP_TEXT
+
+    def _feedback_text(lang: str) -> str:
+        if lang == "en":
+            return (
+                "Contact us:\n"
+                "Describe your request in this chat and we will help you connect and configure your bot."
+            )
+        return CONSTRUCTOR_FEEDBACK_TEXT
 
     async def _safe_edit_text(callback: CallbackQuery, *, text: str, reply_markup=None) -> None:
         if callback.message is None:
@@ -61,8 +130,9 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
         if message.from_user is None:
             return
         await cabinet_service.register_admin(message.from_user)
+        lang = await _admin_lang(message.from_user.id)
         await message.answer(
-            CONSTRUCTOR_WELCOME_TEMPLATE.format(telegram_id=message.from_user.id),
+            _welcome_text(lang, message.from_user.id),
             reply_markup=get_cabinet_keyboard(),
         )
 
@@ -70,10 +140,13 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
     async def cabinet_open(message: Message) -> None:
         if message.from_user is not None:
             await cabinet_service.register_admin(message.from_user)
+            lang = await _admin_lang(message.from_user.id)
+            telegram_id = message.from_user.id
+        else:
+            lang = "ru"
+            telegram_id = 0
         await message.answer(
-            CONSTRUCTOR_WELCOME_TEMPLATE.format(
-                telegram_id=message.from_user.id if message.from_user else "000000"
-            ),
+            _welcome_text(lang, telegram_id),
             reply_markup=get_cabinet_keyboard(),
         )
 
@@ -82,7 +155,46 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
     async def help_command(message: Message) -> None:
         if message.from_user is not None:
             await cabinet_service.register_admin(message.from_user)
-        await message.answer(CONSTRUCTOR_HELP_TEXT, reply_markup=get_cabinet_keyboard())
+            lang = await _admin_lang(message.from_user.id)
+        else:
+            lang = "ru"
+        await message.answer(_help_text(lang), reply_markup=get_cabinet_keyboard())
+
+    @router.message(F.chat.type == ChatType.PRIVATE, Command("feedback"))
+    @router.message(F.chat.type == ChatType.PRIVATE, lambda message: _in_aliases(message, feedback_aliases))
+    async def feedback_command(message: Message) -> None:
+        if message.from_user is not None:
+            await cabinet_service.register_admin(message.from_user)
+            lang = await _admin_lang(message.from_user.id)
+        else:
+            lang = "ru"
+        await message.answer(_feedback_text(lang), reply_markup=get_cabinet_keyboard())
+
+    @router.message(F.chat.type == ChatType.PRIVATE, Command("lang"))
+    @router.message(F.chat.type == ChatType.PRIVATE, lambda message: _in_aliases(message, lang_aliases))
+    async def lang_command(message: Message) -> None:
+        if message.from_user is not None:
+            await cabinet_service.register_admin(message.from_user)
+            lang = await _admin_lang(message.from_user.id)
+        else:
+            lang = "ru"
+        prompt = "Выберите язык интерфейса:" if lang == "ru" else "Choose interface language:"
+        await message.answer(prompt, reply_markup=get_language_inline_keyboard())
+
+    @router.callback_query(F.data.startswith("cabinet:lang:"))
+    async def callback_set_lang(callback: CallbackQuery) -> None:
+        if callback.from_user is None:
+            await callback.answer()
+            return
+        value = callback.data.split(":")[-1].strip().lower() if callback.data else "ru"
+        selected = "en" if value == "en" else "ru"
+        await cabinet_service.set_admin_language(callback.from_user.id, selected)
+        if callback.message is not None:
+            confirmation = (
+                "Язык обновлён. Откройте /cabinet." if selected == "ru" else "Language updated. Open /cabinet."
+            )
+            await callback.message.answer(confirmation, reply_markup=get_cabinet_keyboard())
+        await callback.answer("Готово" if selected == "ru" else "Done")
 
     @router.message(F.chat.type == ChatType.PRIVATE, Command("bind"))
     async def bind_hint_in_constructor(message: Message) -> None:
@@ -320,8 +432,15 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
     async def unknown_private_input(message: Message, state: FSMContext) -> None:
         if await state.get_state() is not None:
             return
+        lang = "ru"
+        if message.from_user is not None:
+            lang = await _admin_lang(message.from_user.id)
         await message.answer(
-            "Выберите действие через кнопки меню или используйте /help.",
+            (
+                "Выберите действие через кнопки меню или используйте /help."
+                if lang == "ru"
+                else "Choose an action via menu buttons or use /help."
+            ),
             reply_markup=get_cabinet_keyboard(),
         )
 

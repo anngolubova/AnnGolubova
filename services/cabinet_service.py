@@ -45,7 +45,14 @@ class CabinetService:
             username=tg_admin.username,
             first_name=tg_admin.first_name,
             last_name=tg_admin.last_name,
+            telegram_language_code=tg_admin.language_code,
         )
+
+    async def get_admin_language(self, admin_telegram_id: int) -> str:
+        return await self._registry.get_admin_ui_language(admin_telegram_id)
+
+    async def set_admin_language(self, admin_telegram_id: int, language: str) -> str:
+        return await self._registry.set_admin_ui_language(admin_telegram_id, language)
 
     async def add_bot(self, *, admin_telegram_id: int, token: str, title: str | None) -> BotRuntime:
         return await self._registry.add_bot_for_admin(

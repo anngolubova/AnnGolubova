@@ -27,6 +27,7 @@ class AdminAccount(TimestampMixin, Base):
     username: Mapped[str | None] = mapped_column(String(255), nullable=True)
     first_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     last_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    ui_language: Mapped[str] = mapped_column(String(8), default="ru", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     bots = relationship("BotModel", back_populates="owner_admin")

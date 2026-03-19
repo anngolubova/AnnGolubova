@@ -24,6 +24,7 @@ async def run_sqlite_compat_migrations(engine: AsyncEngine) -> None:
                         username VARCHAR(255),
                         first_name VARCHAR(255),
                         last_name VARCHAR(255),
+                        ui_language VARCHAR(8) NOT NULL DEFAULT 'ru',
                         is_active BOOLEAN NOT NULL DEFAULT 1,
                         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -36,6 +37,13 @@ async def run_sqlite_compat_migrations(engine: AsyncEngine) -> None:
                     "CREATE INDEX IF NOT EXISTS ix_admins_telegram_id ON admins (telegram_id)"
                 )
             )
+        elif "admins" in existing_tables:
+            admin_columns_result = await conn.execute(text("PRAGMA table_info('admins')"))
+            admin_columns = {row[1] for row in admin_columns_result.fetchall()}
+            if "ui_language" not in admin_columns:
+                await conn.execute(
+                    text("ALTER TABLE admins ADD COLUMN ui_language VARCHAR(8) NOT NULL DEFAULT 'ru'")
+                )
 
         if "bots" in existing_tables:
             columns_result = await conn.execute(text("PRAGMA table_info('bots')"))
