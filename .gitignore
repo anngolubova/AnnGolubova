@@ -1,8 +1,36 @@
-node_modules
-dist
+# OS
 .DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.python-version
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environments and secrets
 .env
-.venv
-__pycache__
-*.pyc
-data/
+.env.*
+!.env.example
+
+# Databases and runtime artifacts
+*.db
+*.sqlite
+*.sqlite3
+data/*
+!data/.gitkeep
+
+# Node / frontend artifacts
+node_modules/
+dist/
+.npm/
+
+# IDE
+.idea/
+.vscode/

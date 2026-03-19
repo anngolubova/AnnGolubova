@@ -1,143 +1,99 @@
-# Telegram Bot Constructor + Feedback Bridge (aiogram 3)
+# Telegram Feedback Constructor Platform
 
-Production-ready проект на Python + aiogram 3:  
-бот-конструктор с личными кабинетами админов и динамическим управлением несколькими feedback-ботами.
+Мультибот-платформа на Python + aiogram 3:
+- конструктор-бот с личными кабинетами админов,
+- динамический запуск/остановка подключенных feedback-ботов,
+- анонимный мост "клиент <-> админ" для каждого экземпляра.
 
-## Что теперь умеет система
+## Возможности
 
-### 1) Конструктор-бот (Admin Bot)
+### Конструктор-бот
+- подключение ботов по токену BotFather;
+- кабинет администратора (мои боты, статистика, экспорт CSV);
+- управление статусом бота (вкл/выкл);
+- изменение приветствия для подключенного бота;
+- owner-only глобальная рассылка по всем экземплярам.
 
-- персональный кабинет каждого админа
-- кнопочная навигация:
-  - `➕ Добавить бота`
-  - `🤖 Мои боты`
-  - `📊 Моя статистика`
-  - `📥 Выгрузка базы`
-- добавление нового Telegram-бота по токену из BotFather
-- включение/выключение каждого бота прямо из кабинета
-- выгрузка базы пользователей в CSV
+### Feedback-боты
+- анонимная пересылка сообщений клиент -> админ -> клиент;
+- диалоги и маршрутизация ответов;
+- команды `/answer`, `/broadcast`, `/block`, `/unblock`, `/stats`, `/bind`, `/setwelcome`;
+- поддержка контента: text, voice, photo, video, audio, documents.
 
-### 2) Управляемые feedback-боты
+### Платформа
+- multi-tenant модель (каждый админ управляет только своими ботами);
+- SQLite + SQLAlchemy (async), миграции совместимости;
+- Redis FSM с fallback на MemoryStorage;
+- Docker-ready;
+- логирование, глобальный обработчик ошибок, process-lock от дублей процесса.
 
-- анонимный мост user → admin → user
-- авто-регистрация пользователей
-- создание и хранение диалогов
-- определение ответов администратора по `reply`
-- threading диалогов
-- рассылки (`/broadcast`)
-- статистика (`/stats`)
-- поддержка контента:
-  - text
-  - voice
-  - photo
-  - video
-  - audio
-  - documents
-
-### 3) Платформенные возможности
-
-- multi-tenant: у каждого админа свои боты и свои данные
-- динамический запуск/остановка управляемых ботов без рестарта приложения
-- SQLite + SQLAlchemy (async)
-- Redis FSM
-- Docker-ready
-- логирование и глобальный error handler
-
-## Архитектура (папки)
+## Структура проекта
 
 ```text
 .
 ├── app.py
-├── requirements.txt
-├── .env.example
+├── bot/
+├── database/
+├── handlers/
+├── keyboards/
+├── services/
+├── utils/
 ├── Dockerfile
 ├── docker-compose.yml
-├── database/
-│   ├── __init__.py
-│   ├── base.py
-│   ├── migrations.py
-│   ├── models.py
-│   └── session.py
-├── bot/
-│   ├── __init__.py
-│   ├── factory.py
-│   └── runtime.py
-├── handlers/
-│   ├── __init__.py
-│   ├── admin.py
-│   ├── cabinet.py
-│   ├── errors.py
-│   └── user.py
-├── services/
-│   ├── __init__.py
-│   ├── bot_registry_service.py
-│   ├── broadcast_service.py
-│   ├── cabinet_service.py
-│   ├── dialog_service.py
-│   ├── polling_manager.py
-│   ├── routing_service.py
-│   └── stats_service.py
-├── keyboards/
-│   ├── __init__.py
-│   ├── admin.py
-│   └── cabinet.py
-└── utils/
-    ├── __init__.py
-    ├── config.py
-    ├── constants.py
-    └── logging.py
+├── requirements.txt
+└── .env.example
 ```
 
-## Модели БД
-
-- `admins`
-- `bots`
-- `users`
-- `dialogs`
-- `messages`
-
-## Конфигурация `.env`
-
-```env
-# Токен конструктора (кабинеты админов)
-CONSTRUCTOR_BOT_TOKEN=...
-
-# Опционально: seed-набор уже готовых feedback-ботов
-BOT_TOKENS=
-
-# Для seed-ботов
-ADMIN_CHAT_ID=
-# BOT_ADMIN_CHAT_IDS=
-
-DATABASE_URL=sqlite+aiosqlite:///./data/feedback_bot.db
-REDIS_URL=redis://localhost:6379/0
-MANAGED_BOTS_SYNC_INTERVAL_SECONDS=8
-LOG_LEVEL=INFO
-```
-
-## Локальный запуск
+## Быстрый запуск (локально)
 
 ```bash
 cp .env.example .env
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-python app.py
+python3 app.py
 ```
 
-## Docker запуск
+## Запуск через Docker
 
 ```bash
 cp .env.example .env
 docker compose up --build -d
 ```
 
-## Как работает в проде
+## Переменные окружения
 
-1. Админ открывает конструктор-бота (`/start`), получает личный кабинет.
-2. Добавляет токен нового бота через кнопку `➕ Добавить бота`.
-3. Платформа валидирует токен, сохраняет бота в БД и автоматически поднимает polling.
-4. Пользователи пишут уже в подключенный feedback-бот.
-5. Сообщения уходят админу, ответы админа (reply) возвращаются пользователю.
+Смотрите `.env.example`.
 
-> ID администратора остаётся скрытым: пользователь всегда видит отправителем только бота.
+Основные:
+- `CONSTRUCTOR_BOT_TOKEN` - токен конструктора (кабинет);
+- `BOT_TOKENS` - необязательные seed-токены managed-ботов;
+- `ADMIN_CHAT_ID` / `BOT_ADMIN_CHAT_IDS` - admin chat для seed-ботов;
+- `SERVICE_OWNER_TELEGRAM_IDS` - Telegram IDs владельцев сервиса (owner-команды);
+- `DATABASE_URL`, `REDIS_URL`, `MANAGED_BOTS_SYNC_INTERVAL_SECONDS`, `LOG_LEVEL`.
+
+## Подготовка к GitHub
+
+Репозиторий уже подготовлен для переноса:
+- безопасный `.gitignore` (env, базы, кэш, IDE, node artifacts);
+- шаблоны для PR и CI;
+- `LICENSE` и `CONTRIBUTING.md`.
+
+Рекомендуемый порядок переноса:
+1. Создать новый репозиторий на GitHub.
+2. Добавить remote:
+   ```bash
+   git remote add origin <your-repo-url>
+   ```
+3. Запушить ветки:
+   ```bash
+   git push -u origin <branch>
+   ```
+4. Проверить GitHub Actions (workflow CI).
+5. Заполнить Secrets/Variables (если понадобится CI/CD для деплоя).
+
+## Важно по безопасности
+
+- Никогда не коммитить реальный `.env`.
+- Токены ботов хранить только в Secrets/Variables CI/CD или в защищенной среде.
+- Перед публикацией убедиться, что в истории коммитов нет секретов.
