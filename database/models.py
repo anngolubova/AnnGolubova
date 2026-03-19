@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from sqlalchemy import BigInteger, Boolean, Enum as SqlEnum, ForeignKey, Index, String, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, Enum as SqlEnum, ForeignKey, Index, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database.base import Base, TimestampMixin
@@ -59,6 +59,7 @@ class BotModel(TimestampMixin, Base):
     bot_telegram_id: Mapped[int | None] = mapped_column(BigInteger, unique=True, nullable=True)
     username: Mapped[str | None] = mapped_column(String(255), nullable=True)
     title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    welcome_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     admin_chat_id: Mapped[int] = mapped_column(BigInteger, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 

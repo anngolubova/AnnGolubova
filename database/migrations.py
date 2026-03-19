@@ -51,3 +51,6 @@ async def run_sqlite_compat_migrations(engine: AsyncEngine) -> None:
 
             if "title" not in existing_columns:
                 await conn.execute(text("ALTER TABLE bots ADD COLUMN title VARCHAR(255)"))
+
+            if "welcome_text" not in existing_columns:
+                await conn.execute(text("ALTER TABLE bots ADD COLUMN welcome_text TEXT"))

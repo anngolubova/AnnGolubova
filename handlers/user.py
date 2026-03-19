@@ -30,7 +30,7 @@ def get_user_router(services: ServiceContainer) -> Router:
         if message.from_user is None:
             return
         await dialog_service.get_or_create_dialog_context(message.from_user)
-        await message.answer(USER_WELCOME_TEXT)
+        await message.answer(services.runtime.welcome_text or USER_WELCOME_TEXT)
 
     @router.message(
         F.chat.type == ChatType.PRIVATE,

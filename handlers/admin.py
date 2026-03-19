@@ -12,6 +12,7 @@ from aiogram.types import Message
 
 from bot.runtime import ServiceContainer
 from keyboards.admin import get_admin_keyboard
+from services.bot_registry_service import BotRegistryService
 from services.broadcast_service import BroadcastService
 from services.dialog_service import DialogService
 from services.routing_service import RoutingService
@@ -25,12 +26,17 @@ class BroadcastState(StatesGroup):
     waiting_content = State()
 
 
+class WelcomeState(StatesGroup):
+    waiting_text = State()
+
+
 def get_admin_router(services: ServiceContainer) -> Router:
     router = Router(name=f"admin_router_{services.runtime.db_bot_id}")
     dialog_service = DialogService(services.session_factory, services.runtime.db_bot_id)
     routing_service = RoutingService()
     stats_service = StatsService(services.session_factory, services.runtime.db_bot_id)
     broadcast_service = BroadcastService(services.session_factory, services.runtime.db_bot_id)
+    registry_service = BotRegistryService(services.session_factory)
 
     def is_admin_chat(message: Message) -> bool:
         return message.chat.id == services.runtime.admin_chat_id
@@ -38,6 +44,79 @@ def get_admin_router(services: ServiceContainer) -> Router:
     @router.message(Command("start"), is_admin_chat)
     async def admin_start_handler(message: Message) -> None:
         await message.answer(ADMIN_START_TEXT, reply_markup=get_admin_keyboard())
+
+    @router.message(Command("bind"), F.chat.type == ChatType.PRIVATE)
+    async def bind_private_hint(message: Message) -> None:
+        await message.answer(
+            "Команда /bind выполняется в группе администраторов.\n"
+            "Добавьте бота в группу и отправьте там /bind."
+        )
+
+    @router.message(Command("bind"), F.chat.type.in_({ChatType.GROUP, ChatType.SUPERGROUP}))
+    async def bind_group_handler(message: Message) -> None:
+        try:
+            await registry_service.bind_admin_chat_for_runtime(
+                db_bot_id=services.runtime.db_bot_id,
+                actor_telegram_id=message.from_user.id if message.from_user else None,
+                owner_admin_telegram_id=services.runtime.owner_admin_telegram_id,
+                new_admin_chat_id=message.chat.id,
+            )
+        except ValueError as error:
+            await message.answer(str(error))
+            return
+
+        services.runtime.admin_chat_id = message.chat.id
+        await message.answer(
+            "Группа успешно привязана как чат администраторов.\n"
+            "Теперь ответы из этой группы будут уходить пользователям."
+        )
+
+    @router.message(Command("setwelcome"), is_admin_chat)
+    async def set_welcome_command(message: Message, state: FSMContext) -> None:
+        payload = (message.text or "").split(maxsplit=1)
+        if len(payload) > 1 and payload[1].strip():
+            try:
+                welcome_text = await registry_service.set_welcome_text_for_runtime(
+                    db_bot_id=services.runtime.db_bot_id,
+                    actor_telegram_id=message.from_user.id if message.from_user else None,
+                    owner_admin_telegram_id=services.runtime.owner_admin_telegram_id,
+                    welcome_text=payload[1].strip(),
+                )
+            except ValueError as error:
+                await message.answer(str(error))
+                return
+
+            services.runtime.welcome_text = welcome_text
+            await state.clear()
+            await message.answer("Приветствие обновлено.")
+            return
+
+        await state.set_state(WelcomeState.waiting_text)
+        await message.answer(
+            "Отправьте новый текст приветствия для клиентов.\n"
+            "Для отмены используйте /cancel."
+        )
+
+    @router.message(is_admin_chat, WelcomeState.waiting_text, F.text)
+    async def set_welcome_text_step(message: Message, state: FSMContext) -> None:
+        try:
+            welcome_text = await registry_service.set_welcome_text_for_runtime(
+                db_bot_id=services.runtime.db_bot_id,
+                actor_telegram_id=message.from_user.id if message.from_user else None,
+                owner_admin_telegram_id=services.runtime.owner_admin_telegram_id,
+                welcome_text=(message.text or "").strip(),
+            )
+        except ValueError as error:
+            await message.answer(str(error))
+            return
+
+        services.runtime.welcome_text = welcome_text
+        await state.clear()
+        await message.answer("Приветствие сохранено.")
+
+    @router.message(is_admin_chat, WelcomeState.waiting_text)
+    async def set_welcome_non_text(message: Message) -> None:
+        await message.answer("Отправьте текст приветствия или /cancel.")
 
     @router.message(Command("stats"), is_admin_chat)
     async def admin_stats_handler(message: Message) -> None:
@@ -82,10 +161,10 @@ def get_admin_router(services: ServiceContainer) -> Router:
             "Можно отправить текст или медиа."
         )
 
-    @router.message(Command("cancel"), is_admin_chat, BroadcastState.waiting_content)
+    @router.message(Command("cancel"), is_admin_chat)
     async def cancel_broadcast(message: Message, state: FSMContext) -> None:
         await state.clear()
-        await message.answer("Режим рассылки отменён.")
+        await message.answer("Текущее действие отменено.")
 
     @router.message(
         is_admin_chat,
@@ -148,7 +227,9 @@ def get_admin_router(services: ServiceContainer) -> Router:
             "Панель администратора:\n"
             "• Ответ пользователю: реплай на пересланное сообщение\n"
             "• /stats — статистика\n"
-            "• /broadcast — рассылка"
+            "• /broadcast — рассылка\n"
+            "• /bind — привязать группу\n"
+            "• /setwelcome — приветствие клиентов"
         )
 
     return router

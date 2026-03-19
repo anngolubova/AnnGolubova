@@ -11,6 +11,7 @@ class BotRuntime:
     token: str
     username: str | None
     title: str | None
+    welcome_text: str | None
     admin_chat_id: int
     owner_admin_telegram_id: int | None
     is_active: bool

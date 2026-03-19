@@ -84,6 +84,25 @@ def get_cabinet_router(cabinet_service: CabinetService) -> Router:
             await cabinet_service.register_admin(message.from_user)
         await message.answer(CONSTRUCTOR_HELP_TEXT, reply_markup=get_cabinet_keyboard())
 
+    @router.message(F.chat.type == ChatType.PRIVATE, Command("bind"))
+    async def bind_hint_in_constructor(message: Message) -> None:
+        await message.answer(
+            "Команда /bind выполняется внутри группы администраторов, "
+            "где уже добавлен ваш подключенный бот.\n\n"
+            "Шаги:\n"
+            "1) Добавьте подключенный бот в группу\n"
+            "2) Отправьте /bind в этой группе\n"
+            "3) Бот подтвердит привязку группы"
+        )
+
+    @router.message(F.chat.type == ChatType.PRIVATE, Command("setwelcome"))
+    async def setwelcome_hint_in_constructor(message: Message) -> None:
+        await message.answer(
+            "Команда /setwelcome выполняется в админ-чате подключенного бота.\n\n"
+            "Пример:\n"
+            "/setwelcome Добро пожаловать! Опишите ваш вопрос, и мы скоро ответим."
+        )
+
     @router.message(F.chat.type == ChatType.PRIVATE, Command("mybots"))
     async def my_bots_command(message: Message) -> None:
         if message.from_user is None:

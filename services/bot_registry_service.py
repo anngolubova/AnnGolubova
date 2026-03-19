@@ -99,6 +99,7 @@ class BotRegistryService:
                     token=bot_row.token,
                     username=bot_row.username,
                     title=bot_row.title,
+                    welcome_text=bot_row.welcome_text,
                     admin_chat_id=bot_row.admin_chat_id,
                     owner_admin_telegram_id=owner_admin_telegram_id,
                     is_active=bool(bot_row.is_active),
@@ -169,6 +170,7 @@ class BotRegistryService:
                     token=row.token,
                     username=row.username,
                     title=row.title,
+                    welcome_text=row.welcome_text,
                     admin_chat_id=row.admin_chat_id,
                     owner_admin_telegram_id=admin_telegram_id,
                     is_active=bool(row.is_active),
@@ -211,6 +213,7 @@ class BotRegistryService:
                             token=existing.token,
                             username=existing.username,
                             title=existing.title,
+                            welcome_text=existing.welcome_text,
                             admin_chat_id=existing.admin_chat_id,
                             owner_admin_telegram_id=admin_telegram_id,
                             is_active=bool(existing.is_active),
@@ -237,6 +240,7 @@ class BotRegistryService:
                             token=existing_by_bot_id.token,
                             username=existing_by_bot_id.username,
                             title=existing_by_bot_id.title,
+                            welcome_text=existing_by_bot_id.welcome_text,
                             admin_chat_id=existing_by_bot_id.admin_chat_id,
                             owner_admin_telegram_id=admin_telegram_id,
                             is_active=bool(existing_by_bot_id.is_active),
@@ -250,6 +254,7 @@ class BotRegistryService:
                         bot_telegram_id=bot_telegram_id,
                         username=username,
                         title=title or username,
+                        welcome_text=None,
                         admin_chat_id=admin_telegram_id,
                         is_active=True,
                     )
@@ -260,6 +265,7 @@ class BotRegistryService:
                         token=bot_row.token,
                         username=bot_row.username,
                         title=bot_row.title,
+                        welcome_text=bot_row.welcome_text,
                         admin_chat_id=bot_row.admin_chat_id,
                         owner_admin_telegram_id=admin_telegram_id,
                         is_active=bool(bot_row.is_active),
@@ -290,6 +296,68 @@ class BotRegistryService:
                 bot_row.is_active = not bot_row.is_active
                 await session.flush()
                 return bool(bot_row.is_active)
+
+    async def bind_admin_chat_for_runtime(
+        self,
+        *,
+        db_bot_id: int,
+        actor_telegram_id: int | None,
+        owner_admin_telegram_id: int | None,
+        new_admin_chat_id: int,
+    ) -> None:
+        async with self._session_factory() as session:
+            async with session.begin():
+                bot_row = await session.get(BotModel, db_bot_id)
+                if bot_row is None:
+                    raise ValueError("Бот не найден.")
+                self._assert_actor_can_manage_bot(
+                    actor_telegram_id=actor_telegram_id,
+                    owner_admin_telegram_id=owner_admin_telegram_id,
+                    current_admin_chat_id=bot_row.admin_chat_id,
+                )
+                bot_row.admin_chat_id = new_admin_chat_id
+                await session.flush()
+
+    async def set_welcome_text_for_runtime(
+        self,
+        *,
+        db_bot_id: int,
+        actor_telegram_id: int | None,
+        owner_admin_telegram_id: int | None,
+        welcome_text: str,
+    ) -> str:
+        async with self._session_factory() as session:
+            async with session.begin():
+                bot_row = await session.get(BotModel, db_bot_id)
+                if bot_row is None:
+                    raise ValueError("Бот не найден.")
+                self._assert_actor_can_manage_bot(
+                    actor_telegram_id=actor_telegram_id,
+                    owner_admin_telegram_id=owner_admin_telegram_id,
+                    current_admin_chat_id=bot_row.admin_chat_id,
+                )
+                bot_row.welcome_text = welcome_text.strip()
+                await session.flush()
+                return bot_row.welcome_text
+
+    def _assert_actor_can_manage_bot(
+        self,
+        *,
+        actor_telegram_id: int | None,
+        owner_admin_telegram_id: int | None,
+        current_admin_chat_id: int,
+    ) -> None:
+        if actor_telegram_id is None:
+            raise ValueError("Не удалось определить администратора команды.")
+        if owner_admin_telegram_id is not None:
+            if actor_telegram_id != owner_admin_telegram_id:
+                raise ValueError("У вас нет прав управлять этим ботом.")
+            return
+
+        # Legacy fallback: allow current private admin chat owner to re-bind.
+        if current_admin_chat_id > 0 and actor_telegram_id == current_admin_chat_id:
+            return
+        raise ValueError("Команда недоступна для этого пользователя.")
 
     async def _resolve_bot_identity(self, token: str) -> tuple[int, str | None]:
         temp_bot = Bot(token=token)
