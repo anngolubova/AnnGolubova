@@ -29,7 +29,10 @@ class ManagedBotsPollingManager:
 
     async def run_forever(self) -> None:
         while not self._stopped.is_set():
-            await self._reconcile()
+            try:
+                await self._reconcile()
+            except Exception:
+                logger.exception("Managed bots reconcile failed; will retry on next tick.")
             try:
                 await asyncio.wait_for(
                     self._stopped.wait(),

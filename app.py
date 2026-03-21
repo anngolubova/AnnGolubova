@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+from collections.abc import Awaitable, Callable
 
 from aiogram import Bot
 from aiogram.client.default import DefaultBotProperties
@@ -20,6 +21,32 @@ from utils.logging import setup_logging
 from utils.process_lock import ProcessAlreadyRunningError, SingleInstanceLock
 
 logger = logging.getLogger(__name__)
+
+
+async def run_with_supervision(
+    *,
+    name: str,
+    worker: Callable[[], Awaitable[None]],
+    restart_delay_seconds: int = 5,
+) -> None:
+    while True:
+        try:
+            await worker()
+            logger.warning(
+                "%s stopped unexpectedly. Restarting in %ss.",
+                name,
+                restart_delay_seconds,
+            )
+        except asyncio.CancelledError:
+            logger.info("%s supervisor cancelled.", name)
+            raise
+        except Exception:
+            logger.exception(
+                "%s crashed. Restarting in %ss.",
+                name,
+                restart_delay_seconds,
+            )
+        await asyncio.sleep(restart_delay_seconds)
 
 
 async def run_feedback_bot(runtime: BotRuntime, services: ServiceContainer, redis_url: str) -> None:
@@ -135,18 +162,30 @@ async def main() -> None:
             refresh_interval_seconds=settings.managed_bots_sync_interval_seconds,
             exclude_tokens=exclude_tokens,
         )
-        manager_task = asyncio.create_task(polling_manager.run_forever(), name="managed-bots-manager")
+        manager_task = asyncio.create_task(
+            run_with_supervision(
+                name="Managed bots manager",
+                worker=polling_manager.run_forever,
+            ),
+            name="managed-bots-manager-supervisor",
+        )
 
         constructor_task: asyncio.Task[None] | None = None
         if settings.constructor_bot_token:
-            constructor_task = asyncio.create_task(
-                run_constructor_bot(
+            async def _run_constructor_once() -> None:
+                await run_constructor_bot(
                     constructor_bot_token=settings.constructor_bot_token,
                     redis_url=settings.redis_url,
                     session_factory=session_factory,
                     service_owner_telegram_ids=set(settings.service_owner_telegram_ids),
+                )
+
+            constructor_task = asyncio.create_task(
+                run_with_supervision(
+                    name="Constructor bot",
+                    worker=_run_constructor_once,
                 ),
-                name="constructor-bot",
+                name="constructor-bot-supervisor",
             )
         else:
             logger.warning(
@@ -157,14 +196,14 @@ async def main() -> None:
         tasks = [manager_task] + ([constructor_task] if constructor_task else [])
         await asyncio.gather(*tasks)
     finally:
-        if polling_manager is not None:
-            await polling_manager.stop()
         for task in tasks:
             if task is None or task.done():
                 continue
             task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
                 await task
+        if polling_manager is not None:
+            await polling_manager.stop()
         if engine is not None:
             await engine.dispose()
         instance_lock.release()
