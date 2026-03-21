@@ -80,6 +80,7 @@ docker compose up --build -d
 - `CODEOWNERS` для авто-назначения ревьюеров;
 - GitHub Actions CI workflow;
 - release checklist: `docs/RELEASE_CHECKLIST.md`;
+- upload guide: `docs/GITHUB_UPLOAD.md`;
 - `LICENSE` и `CONTRIBUTING.md`.
 
 Рекомендуемый порядок переноса:
